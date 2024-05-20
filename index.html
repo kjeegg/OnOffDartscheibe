@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <title>Dartscheibe - Startseite</title>
+    <style>
+        body {
+            background-color: #1a1a1a;
+            color: #ffffff;
+        }
+        .container {
+            text-align: center;
+            margin-top: 150px;
+        }
+        .btn-group {
+            margin-top: 20px;
+        }
+        footer {
+            position: fixed;
+            bottom: 0;
+            width: 100%;
+            text-align: center;
+            padding: 10px;
+            background-color: #1a1a1a;
+            color: #ffffff;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1>Dartscheibe</h1>
+    <div class="btn-group" role="group">
+        <button id="newGameBtn" class="btn btn-light" data-bs-toggle="modal" data-bs-target="#newGameModal">Neues Spiel</button>
+        <button id="joinGameBtn" class="btn btn-light" data-bs-toggle="modal" data-bs-target="#joinGameModal">Spiel beitreten</button>
+        <button id="addPlayerBtn" class="btn btn-light" data-bs-toggle="modal" data-bs-target="#addPlayerModal">Spieler hinzufügen</button>
+        <button id="loginBtn" class="btn btn-light" data-bs-toggle="modal" data-bs-target="#loginModal">Login</button>
+    </div>
+</div>
+
+<!-- Modals -->
+<div class="modal fade" id="newGameModal" tabindex="-1" aria-labelledby="newGameModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="newGameModalLabel">Neues Spiel erstellen</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="createGameForm">
+                    <div class="mb-3">
+                        <label for="gameId" class="form-label">Spiel-ID</label>
+                        <input type="text" class="form-control" id="gameId" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="player1Id" class="form-label">Spieler 1 ID</label>
+                        <input type="text" class="form-control" id="player1Id" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="player2Id" class="form-label">Spieler 2 ID</label>
+                        <input type="text" class="form-control" id="player2Id" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Spiel erstellen</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="joinGameModal" tabindex="-1" aria-labelledby="joinGameModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="joinGameModalLabel">Spiel beitreten</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <!-- Join game form content goes here -->
+                <!-- Assuming similar form structure as new game -->
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="addPlayerModal" tabindex="-1" aria-labelledby="addPlayerModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="addPlayerModalLabel">Spieler hinzufügen</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="addPlayerForm">
+                    <div class="mb-3">
+                        <label for="playerName" class="form-label">Spielername</label>
+                        <input type="text" class="form-control" id="playerName" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="playerNickname" class="form-label">Nickname</label>
+                        <input type="text" class="form-control" id="playerNickname" required>
+                    </div>
+                    <button type="submit" class="btn btn-secondary">Spieler hinzufügen</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="loginModal" tabindex="-1" aria-labelledby="loginModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="loginModalLabel">Login</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <!-- Login form content goes here -->
+            </div>
+        </div>
+    </div>
+</div>
+
+<footer>
+    <a href="/kontakt">Kontakt</a> |
+    <a href="/impressum">Impressum</a> |
+    <a href="/datenschutz">Datenschutz</a>
+</footer>
+
+<div id="cookieConsent" class="alert alert-info fixed-bottom mb-0 text-center" style="display: none;">
+    Diese Website verwendet Cookies, um die Benutzererfahrung zu verbessern.
+    <a href="/datenschutz" class="alert-link">Datenschutzrichtlinie</a>.
+    <button type="button" class="btn btn-success btn-sm" onclick="acceptCookies()">Einverstanden</button>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    document.getElementById('createGameForm').addEventListener('submit', async function(event) {
+        event.preventDefault();
+        const gameId = document.getElementById('gameId').value;
+        const player1Id = parseInt(document.getElementById('player1Id').value);
+        const player2Id = parseInt(document.getElementById('player2Id').value);
+        console.log('Creating game with ID:', gameId, 'and players:', player1Id, player2Id);
+        console.log('typeof gameId:', typeof gameId, 'typeof player1Id:', typeof player1Id, 'typeof player2Id:', typeof player2Id);
+
+        const gameData = {
+            "uid": gameId,
+            "player": [player1Id, player2Id],
+            "game": "x01",
+            "variant": "501",
+            "in": "straight",
+            "out": "double",
+            "sound": true,
+            "podium": false,
+            "autoswitch": false,
+            "cricketrandom": false,
+            "cricketghost": false
+        };
+
+        try {
+            console.log('Sending game data:', gameData);
+            const response = await fetch(`https://api.onoff-dart.de/api/game/${gameId}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(gameData)
+            });
+
+            if (!response.ok) {
+                throw new Error('Network response was not ok');
+            }
+
+            const data = await response.json();
+            console.log('Game created:', data);
+            alert('Spiel erfolgreich erstellt!');
+            window.location.href = `https://api.onoff-dart.de/game/${gameId}/display`;
+        } catch (error) {
+            console.error('Fehler beim Erstellen des Spiels:', error);
+            alert('Fehler beim Erstellen des Spiels: ' + error.message);
+        }
+    });
+
+    document.getElementById('addPlayerForm').addEventListener('submit', async function(event) {
+        event.preventDefault();
+        const playerName = document.getElementById('playerName').value;
+        const playerNickname = document.getElementById('playerNickname').value;
+
+        const playerData = {
+            "name": playerName,
+            "nickname": playerNickname
+        };
+
+        try {
+            console.log('Sending player data:', playerData);
+            const response = await fetch('https://api.onoff-dart.de/api/player', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(playerData)
+            });
+
+            if (!response.ok) {
+                throw new Error('Network response was not ok');
+            }
+
+            const data = await response.json();
+            console.log('Player created:', data);
+            alert('Spieler erfolgreich hinzugefügt!');
+            document.getElementById('addPlayerForm').reset();
+        } catch (error) {
+            console.error('Fehler beim Hinzufügen des Spielers:', error);
+            alert('Fehler beim Hinzufügen des Spielers: ' + error.message);
+        }
+    });
+
+    window.onload = function() {
+        if (!getCookie('cookieConsent')) {
+            document.getElementById('cookieConsent').style.display = 'block';
+        }
+    };
+
+    function acceptCookies() {
+        document.getElementById('cookieConsent').style.display = 'none';
+        setCookie('cookieConsent', 'true', 365);
+    }
+
+    function setCookie(name, value, days) {
+        var expires = "";
+        if (days) {
+            var date = new Date();
+            date.setTime(date.getTime() + (days*24*60*60*1000));
+            expires = "; expires=" + date.toUTCString();
+        }
+        document.cookie = name + "=" + (value || "")  + expires + "; path=/";
+    }
+
+    function getCookie(name) {
+        var nameEQ = name + "=";
+        var ca = document.cookie.split(';');
+        for(var i=0;i < ca.length;i++) {
+            var c = ca[i];
+            while (c.charAt(0)==' ') c = c.substring(1,c.length);
+            if (c.indexOf(nameEQ) == 0) return c.substring(nameEQ.length,c.length);
+        }
+        return null;
+    }
+</script>
+</body>
+</html>
