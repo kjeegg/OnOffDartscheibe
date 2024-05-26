@@ -40,25 +40,26 @@
 </div>
 
 <!-- Modals -->
+<!-- New Game Modal -->
 <div class="modal fade" id="newGameModal" tabindex="-1" aria-labelledby="newGameModalLabel" aria-hidden="true">
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title" id="newGameModalLabel">Neues Spiel erstellen</h5>
+                <h5 class="text-dark modal-title" id="newGameModalLabel">Neues Spiel erstellen</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
                 <form id="createGameForm">
                     <div class="mb-3">
-                        <label for="gameId" class="form-label">Spiel-ID</label>
+                        <label for="gameId" class="text-dark form-label">Spiel-ID</label>
                         <input type="text" class="form-control" id="gameId" required>
                     </div>
                     <div class="mb-3">
-                        <label for="player1Id" class="form-label">Spieler 1 ID</label>
+                        <label for="player1Id" class="text-dark form-label">Spieler 1 ID</label>
                         <input type="text" class="form-control" id="player1Id" required>
                     </div>
                     <div class="mb-3">
-                        <label for="player2Id" class="form-label">Spieler 2 ID</label>
+                        <label for="player2Id" class="text-dark form-label">Spieler 2 ID</label>
                         <input type="text" class="form-control" id="player2Id" required>
                     </div>
                     <button type="submit" class="btn btn-primary">Spiel erstellen</button>
@@ -68,36 +69,43 @@
     </div>
 </div>
 
+<!-- Join Game Modal -->
 <div class="modal fade" id="joinGameModal" tabindex="-1" aria-labelledby="joinGameModalLabel" aria-hidden="true">
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title" id="joinGameModalLabel">Spiel beitreten</h5>
+                <h5 class="text-dark modal-title" id="joinGameModalLabel">Spiel beitreten</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
-                <!-- Join game form content goes here -->
-                <!-- Assuming similar form structure as new game -->
+                <form id="joinGameForm">
+                    <div class="mb-3">
+                        <label for="joinGameId" class="text-dark form-label">Spiel-ID</label>
+                        <input type="text" class="form-control" id="joinGameId" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Beitreten</button>
+                </form>
             </div>
         </div>
     </div>
 </div>
 
+<!-- Add Player Modal -->
 <div class="modal fade" id="addPlayerModal" tabindex="-1" aria-labelledby="addPlayerModalLabel" aria-hidden="true">
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title" id="addPlayerModalLabel">Spieler hinzufügen</h5>
+                <h5 class="text-dark modal-title" id="addPlayerModalLabel">Spieler hinzufügen</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
                 <form id="addPlayerForm">
                     <div class="mb-3">
-                        <label for="playerName" class="form-label">Spielername</label>
+                        <label for="playerName" class="text-dark form-label">Spielername</label>
                         <input type="text" class="form-control" id="playerName" required>
                     </div>
                     <div class="mb-3">
-                        <label for="playerNickname" class="form-label">Nickname</label>
+                        <label for="playerNickname" class="text-dark form-label">Nickname</label>
                         <input type="text" class="form-control" id="playerNickname" required>
                     </div>
                     <button type="submit" class="btn btn-secondary">Spieler hinzufügen</button>
@@ -107,15 +115,26 @@
     </div>
 </div>
 
+<!-- Login Modal -->
 <div class="modal fade" id="loginModal" tabindex="-1" aria-labelledby="loginModalLabel" aria-hidden="true">
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title" id="loginModalLabel">Login</h5>
+                <h5 class="text-dark modal-title" id="loginModalLabel">Login</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
-                <!-- Login form content goes here -->
+                <form id="loginForm">
+                    <div class="mb-3">
+                        <label for="username" class="text-dark form-label">Benutzername</label>
+                        <input type="text" class="form-control" id="username" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="password" class="text-dark form-label">Passwort</label>
+                        <input type="password" class="form-control" id="password" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Login</button>
+                </form>
             </div>
         </div>
     </div>
@@ -140,8 +159,6 @@
         const gameId = document.getElementById('gameId').value;
         const player1Id = parseInt(document.getElementById('player1Id').value);
         const player2Id = parseInt(document.getElementById('player2Id').value);
-        console.log('Creating game with ID:', gameId, 'and players:', player1Id, player2Id);
-        console.log('typeof gameId:', typeof gameId, 'typeof player1Id:', typeof player1Id, 'typeof player2Id:', typeof player2Id);
 
         const gameData = {
             "uid": gameId,
@@ -158,8 +175,7 @@
         };
 
         try {
-            console.log('Sending game data:', gameData);
-            const response = await fetch(`https://api.onoff-dart.de/api/game/${gameId}`, {
+            const response = await fetch(`http://127.0.0.1:8000/api/game/${gameId}`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
@@ -172,12 +188,47 @@
             }
 
             const data = await response.json();
-            console.log('Game created:', data);
             alert('Spiel erfolgreich erstellt!');
-            window.location.href = `https://api.onoff-dart.de/game/${gameId}/display`;
+            window.location.href = `spiel.html?gameId=${gameId}`;
         } catch (error) {
-            console.error('Fehler beim Erstellen des Spiels:', error);
             alert('Fehler beim Erstellen des Spiels: ' + error.message);
+        }
+    });
+
+    document.getElementById('joinGameForm').addEventListener('submit', async function(event) {
+        event.preventDefault();
+        const gameId = document.getElementById('joinGameId').value;
+
+        try {
+            const response = await fetch(`http://127.0.0.1:8000/api/game/${gameId}`, {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            });
+
+            if (!response.ok) {
+                throw new Error('Network response was not ok');
+            }
+
+            const data = await response.json();
+            alert('Spiel beigetreten!');
+            window.location.href = `spiel.html?gameId=${gameId}`;
+        } catch (error) {
+            alert('Fehler beim Beitreten des Spiels: ' + error.message);
+        }
+    });
+
+    document.getElementById('loginForm').addEventListener('submit', function(event) {
+        event.preventDefault();
+        const username = document.getElementById('username').value;
+        const password = document.getElementById('password').value;
+
+        // Simple admin login check for demonstration purposes
+        if (username === 'admin' && password === 'admin123') {
+            window.location.href = 'admin.html';
+        } else {
+            alert('Falscher Benutzername oder Passwort');
         }
     });
 
@@ -192,8 +243,7 @@
         };
 
         try {
-            console.log('Sending player data:', playerData);
-            const response = await fetch('https://api.onoff-dart.de/api/player', {
+            const response = await fetch('http://127.0.0.1:8000/api/player', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
@@ -206,11 +256,9 @@
             }
 
             const data = await response.json();
-            console.log('Player created:', data);
             alert('Spieler erfolgreich hinzugefügt!');
             document.getElementById('addPlayerForm').reset();
         } catch (error) {
-            console.error('Fehler beim Hinzufügen des Spielers:', error);
             alert('Fehler beim Hinzufügen des Spielers: ' + error.message);
         }
     });
