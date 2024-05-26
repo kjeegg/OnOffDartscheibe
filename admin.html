@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <title>Admin-Einstellungen</title>
+    <style>
+        body {
+            background-color: #1a1a1a;
+            color: #ffffff;
+        }
+        .container {
+            text-align: center;
+            margin-top: 50px;
+        }
+        footer {
+            position: fixed;
+            bottom: 0;
+            width: 100%;
+            text-align: center;
+            padding: 10px;
+            background-color: #1a1a1a;
+            color: #ffffff;
+        }
+    </style>
+</head>
+<body>
+<nav class="navbar navbar-dark bg-dark">
+    <div class="container-fluid">
+        <a class="navbar-brand" href="#">Admin-Einstellungen</a>
+        <div class="d-flex">
+            <a href="index.html" class="nav-link text-light">Startseite</a>
+        </div>
+    </div>
+</nav>
+
+<div class="container">
+    <h1>Admin-Einstellungen</h1>
+    <div class="mb-3">
+        <button class="btn btn-primary" onclick="loadGames()">Lade Spiele</button>
+    </div>
+    <div id="gamesContainer"></div>
+    <div id="gameActions" class="mt-4" style="display: none;">
+        <h3>Spiel verwalten</h3>
+        <button class="btn btn-danger" onclick="deleteGame()">Spiel löschen</button>
+        <button class="btn btn-secondary" onclick="startNewGame()">Neues Spiel starten</button>
+    </div>
+</div>
+
+<footer>
+    <a href="/kontakt">Kontakt</a> |
+    <a href="/impressum">Impressum</a> |
+    <a href="/datenschutz">Datenschutz</a>
+</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    let selectedGameId = null;
+
+    async function loadGames() {
+        try {
+            const response = await fetch('http://127.0.0.1:8000/api/game', {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            });
+
+            if (!response.ok) {
+                throw new Error('Network response was not ok');
+            }
+
+            const games = await response.json();
+            displayGames(games);
+        } catch (error) {
+            console.error('Fehler beim Laden der Spiele:', error);
+            alert('Fehler beim Laden der Spiele: ' + error.message);
+        }
+    }
+
+    function displayGames(games) {
+        const gamesContainer = document.getElementById('gamesContainer');
+        gamesContainer.innerHTML = '';
+
+        games.forEach(game => {
+            const gameElement = document.createElement('div');
+            gameElement.className = 'card text-dark bg-light mb-3';
+            gameElement.innerHTML = `
+                <div class="card-body">
+                    <h5 class="card-title">Spiel ID: ${game.uid}</h5>
+                    <p class="card-text">Spieler: ${game.player.join(', ')}</p>
+                    <button class="btn btn-primary" onclick="selectGame('${game.uid}')">Verwalten</button>
+                </div>
+            `;
+            gamesContainer.appendChild(gameElement);
+        });
+    }
+
+    function selectGame(gameId) {
+        selectedGameId = gameId;
+        document.getElementById('gameActions').style.display = 'block';
+    }
+
+    async function deleteGame() {
+        if (!selectedGameId) {
+            alert('Kein Spiel ausgewählt');
+            return;
+        }
+
+        try {
+            const response = await fetch(`http://127.0.0.1:8000/api/game/${selectedGameId}`, {
+                method: 'DELETE',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            });
+
+            if (!response.ok) {
+                throw new Error('Network response was not ok');
+            }
+
+            alert('Spiel erfolgreich gelöscht');
+            loadGames();
+            document.getElementById('gameActions').style.display = 'none';
+        } catch (error) {
+            console.error('Fehler beim Löschen des Spiels:', error);
+            alert('Fehler beim Löschen des Spiels: ' + error.message);
+        }
+    }
+
+    async function startNewGame() {
+        const newGameId = prompt('Bitte geben Sie eine neue Spiel-ID ein:');
+        if (!newGameId) {
+            alert('Ungültige Spiel-ID');
+            return;
+        }
+
+        const newGameData = {
+            "uid": newGameId,
+            "player": [1, 2], // Example player IDs
+            "game": "x01",
+            "variant": "501",
+            "in": "straight",
+            "out": "double",
+            "sound": true,
+            "podium": false,
+            "autoswitch": false,
+            "cricketrandom": false,
+            "cricketghost": false
+        };
+
+        try {
+            const response = await fetch(`http://127.0.0.1:8000/api/game/${newGameId}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(newGameData)
+            });
+
+            if (!response.ok) {
+                throw new Error('Network response was not ok');
+            }
+
+            alert('Neues Spiel erfolgreich gestartet');
+            loadGames();
+        } catch (error) {
+            console.error('Fehler beim Starten des neuen Spiels:', error);
+            alert('Fehler beim Starten des neuen Spiels: ' + error.message);
+        }
+    }
+</script>
+</body>
+</html>
