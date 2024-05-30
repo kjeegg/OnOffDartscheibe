@@ -1,7 +1,7 @@
-body {
-    background-color: white;
-    font-family: Outfit, sans-serif;
-
+:root {
+    --bg-color: white;
+    --font-color: black;
+    
     /* fonts */
     --base: 18px;
     --small: 14px;
@@ -17,8 +17,18 @@ body {
     --corner-small: 10px;
     --corner-medium: 20px;
     --corner-large: 50px;
-}
 
+    /*  */
+}
+[data-theme="dark"] {
+    --bg-color: black;
+    --font-color: white;
+}
+body {
+    font-family: Outfit, sans-serif;
+    background-color: var(--bg-color);
+    color: var(--font-color);
+}
 /* general */
 h1{
     font-size: var(--xlarge);
@@ -39,23 +49,32 @@ h2{
 /* footer */
 footer {
     position: fixed;
+    display: inline-flex;
+    justify-content: center;
     bottom: 0;
     width: 100%;
     text-align: center;
     padding: 10px;
-    background-color: #1a1a1a;
+    background-color: black;
 }
-footer a {
+.footer-div {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 100%;
+}
+.footer-div a {
     font-size: var(--base);
     color: #ffffff;
     text-decoration: none;
     margin-left: 10px;
     margin-right: 10px;
 }
-footer a:hover {
+.footer-div a:hover {
     color: var(--fh-mint);
     transition: 0.2s;
 }
+
 
 /* navbar */
 .navbar-own {
@@ -98,8 +117,8 @@ footer a:hover {
 
 /* buttons */
 .btn {
-    background-color: black;
-    color: white;
+    background-color: var(--font-color);
+    color: var(--bg-color);
     border: none;
     border-radius: var(--corner-large);
     text-decoration: none;
@@ -111,3 +130,72 @@ footer a:hover {
     transition: 0.2s;
     color: white;
 }
+.btn-primary {
+    background-color: black;
+    color: white;
+}
+
+
+
+/* Dark Mode toggle */
+.theme-switch-wrapper {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    white-space: nowrap;
+  
+    p {
+      margin-bottom: 0px;
+      margin-right: 10px;
+      font-size: var(--base);
+      color: white;
+    }
+  }
+  .theme-switch {
+    display: inline-block;
+    height: 34px;
+    position: relative;
+    width: 60px;
+  }
+  
+  .theme-switch input {
+    display:none;
+  }
+  
+  .slider {
+    background-color: #ccc;
+    bottom: 0;
+    cursor: pointer;
+    left: 0;
+    position: absolute;
+    right: 0;
+    top: 0;
+    transition: .4s;
+  }
+  
+  .slider:before {
+    background-color: #fff;
+    bottom: 4px;
+    content: "";
+    height: 26px;
+    left: 4px;
+    position: absolute;
+    transition: .4s;
+    width: 26px;
+  }
+  
+  input:checked + .slider {
+    background-color: var(--fh-mint);
+  }
+  
+  input:checked + .slider:before {
+    transform: translateX(26px);
+  }
+  
+  .slider.round {
+    border-radius: 34px;
+  }
+  
+  .slider.round:before {
+    border-radius: 50%;
+  }
