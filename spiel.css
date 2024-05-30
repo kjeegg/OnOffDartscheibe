@@ -1,0 +1,78 @@
+/* TODO: Media queries */
+
+body {
+    background-color: #ffffff;
+    color: #000000;
+}
+.container {
+    text-align: center;
+    margin-top: 50px;
+}
+.game-title {
+    text-align: left;
+    margin-bottom: 50px;
+}
+.scoreboard {
+    display: flex;
+    justify-content: space-between;
+    width: 100%;
+}
+.player-box {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    padding-top: 50px;
+    padding-bottom: 50px;
+    padding-left: 100px;
+    padding-right:100px;
+    background-color: #B5B5B5;
+    text-align: center;
+    font-size: var(--large);
+    font-weight: 600;
+    border-radius: var(--corner-large);
+}
+.player {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 200px;
+}
+.pic {
+    height: 200px;
+    width: 200px;
+    background-color: white;
+    border-radius: var(--corner-medium);
+    /* this needs to depend on the player currently throwing */
+    border: 10px solid var(--fh-mint);
+}
+.player-name {
+    margin-top: 0px;
+    margin-bottom: 20px;
+}
+.score {
+    font-size: var(--xlarge);
+    color: var(--fh-mint);
+    background-color: #000000;
+    border-radius: var(--corner-medium);
+    margin-bottom: 20px;
+    width: 100%;
+}
+.throw-history {
+    display: inline-grid;
+    grid-template-columns: repeat(3, 1fr);
+    grid-template-rows: 1fr;
+    column-gap: 20px;
+    width: 100%;
+}
+.throw {
+    font-size: var(--large);
+    font-weight: 600;
+    background-color: white;
+    padding-left: 10px;
+    padding-right: 10px;
+    border-radius: var(--corner-small);
+}
+.history-table {
+    margin-top: 50px;
+}
