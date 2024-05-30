@@ -1,4 +1,6 @@
 body {
+    font-family: Outfit, sans-serif;
+
     /* fonts */
     --base: 18px;
     --small: 14px;
@@ -14,9 +16,9 @@ body {
     --corner-small: 10px;
     --corner-medium: 20px;
     --corner-large: 50px;
-
-    font-family: Outfit, sans-serif;
 }
+
+/* general */
 h1{
     font-size: var(--xlarge);
     font-family: Outfit, sans-serif;
@@ -27,6 +29,13 @@ h2{
     font-family: Outfit, sans-serif;
     font-weight: 600; /* semi-bold */
 }
+.font-base {
+    font-size: var(--base);
+    font-weight: 500;
+}
+
+
+/* footer */
 footer {
     position: fixed;
     bottom: 0;
@@ -42,17 +51,42 @@ footer a {
     margin-left: 10px;
     margin-right: 10px;
 }
-.font-base {
-    font-size: var(--base);
-    font-weight: 500;
-}
-.navbar {
-    background-color: black;
-}
+
+/* navbar */
 .navbar-own {
     display: flex;
     justify-content: space-between;
     align-items: center;
     padding: 20px;
-    background-color: #1a1a1a;
+    background-color: black;
+}
+.navbar-own a {
+    color: white;
+    text-decoration: none;
+    font-size: var(--base);
+    font-weight: 500;
+}
+.navbar-own a:hover {
+    color: var(--fh-mint);
+    transition: 0.2s;
+}
+.nav-items {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 20px
+}
+.nav-button {
+    background-color: white;
+    border: none;
+    border-radius: var(--corner-medium);
+    text-decoration: none;
+    font-size: var(--base);
+    font-weight: 500;
+    padding-left: 20px;
+    padding-right: 20px;
+}
+.nav-button:hover {
+    background-color: var(--fh-mint);
+    transition: 0.2s;
 }
