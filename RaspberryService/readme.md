@@ -6,7 +6,7 @@ Hier landet das Python Program, welches auf dem Raspberry pi läuft, und folgend
 
 Aktuelle Todos:
 - [ ] Arduino-Pi Schnittstelle
-  - [ ] Auswertung der Arduino Nachrichten + versnad and API
+  - [ ] Auswertung der Arduino Nachrichten + Versand an API
   - [ ] Übermittlung nötiger Steuerbefehle an den Arduino
 - [ ] LED Steuerung
 - [ ] Camera Linien erkennung und verarbeitung
