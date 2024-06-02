@@ -23,8 +23,9 @@ Daher werden folgende API funktionalitäten vom Program benötigt:
 Aktuelle Todos:
 - [ ] Arduino-Pi Schnittstelle
   - [ ] Auswertung der Arduino Nachrichten
-  - [ ] Bestimmung des jewiligen Gamestates und berechnung des nächsten absierend auf empfangenden Daten
+  - [ ] Bestimmung des jewiligen Gamestates und berechnung des nächsten basierend auf empfangenden Daten
   - [ ] Gamestate updates an die API senden
+- [ ] Gamestate Updates von der API abfragen
 - [ ] LED Steuerung
 - [ ] Camera Linien erkennung und verarbeitung
 - [ ] Camera Feed wird an Server weitergesendet
