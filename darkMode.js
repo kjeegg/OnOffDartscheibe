@@ -21,7 +21,7 @@ function switchTheme(e) {
         localStorage.setItem('theme', 'light'); //add this
     }    
 }
-
+// gets which theme was set in local storage
 const currentTheme = localStorage.getItem('theme') ? localStorage.getItem('theme') : null;
 
 if (currentTheme) {

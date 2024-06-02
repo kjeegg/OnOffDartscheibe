@@ -12,6 +12,7 @@
     /* colors */
     --light-gray: #D9D9D9;
     --fh-mint: #00b1ac;
+    --red: rgb(232, 54, 54);
     
     /* corners */
     --corner-small: 10px;
@@ -133,6 +134,22 @@ footer {
 .btn-primary {
     background-color: black;
     color: white;
+}
+.button-big {
+    background-color: var(--font-color);
+    color: var(--bg-color);
+    border: none;
+    border-radius: var(--corner-medium);
+    text-decoration: none;
+    font-size: var(--medium);
+    font-weight: 700;
+    padding: 10px;
+    transition: 0.2s;
+}
+.button-big:hover {
+    background-color: var(--fh-mint);
+    transform: scale(1.1);
+    transition: 0.2s;
 }
 
 

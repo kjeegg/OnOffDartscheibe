@@ -26,15 +26,22 @@
         </nav>
 
         <div class="container">
-            <div class="game-title">
-                <h1>501</h1>
-                <h2>Double Out</h2>
+            <div class="top-row">
+                <div class="game-title">
+                    <h1>501</h1>
+                    <h2>Double Out</h2>
+                </div>
+                <div class="game-buttons">
+                    <button class="button-big skip-turn">Überspringen</button>
+                    <button class="button-big enter-throw">Manuell eintragen</button>
+                    <button class="button-big exit-game">Spiel beenden</button>
+                </div>
             </div>
             <div class="scoreboard-wrapper">
                 <div class="scoreboard">
                     <div class="player-box">
                         <div class="player" id="player1">
-                            <div class="pic"></div>
+                            <div class="pic active"></div>
                             <div class="player-name" id="player1Name">Spieler 1</div>
                             <div class="score" id="score1">124</div>
                         </div>
@@ -57,7 +64,6 @@
                         </div>
                     </div>
                 </div>
-
             </div>
             <div class="history-table">
                 <table class="table table-dark table-striped">
@@ -82,6 +88,7 @@
                 <a href="/datenschutz">Datenschutz</a>
             </div>
             <div class="theme-switch-wrapper">
+                <p>Dark Mode</p>
                 <label class="theme-switch" for="checkbox">
                     <input type="checkbox" id="checkbox" />
                     <div class="slider round"></div>
@@ -152,7 +159,6 @@
                     previousGameData = game;
                 }
             }
-
             window.onload = function() {
                 loadGame();
                 setInterval(loadGame, 5000); // Update every 5 seconds
