@@ -1,10 +1,10 @@
 import serial
 import time
-from enum import Enum
 import re
 import requests
 import threading
 from requests.packages.urllib3.exceptions import InsecureRequestWarning
+import json
 
 ARDUINO_PORT = "COM8" #Der Port an welchem Der Arduino via USB angeschlossen ist
 BAUD_RATE = 9600 #Die Baud Rate für die Arduino-USB-Serial Verbindnung
@@ -14,10 +14,9 @@ API_SERVER_DOMAIN = "https://api.dascr.local/api"#Die Domain des API-Servers
 
 #-----------------------------
 serial_conn = serial.Serial() #Das Objekt für die Serielle Verbindung (wird beim Verbidnugnscheck initialisiert)
+last_game_State = None #Speichert den lezten gefechten Spielzustand
+
 requests.packages.urllib3.disable_warnings(InsecureRequestWarning) #Schaltet TLS warnungen aus
-
-
-
 #-----------------------------
 
 '''
@@ -65,21 +64,35 @@ def enableLEDs():
 #Repräsentiert den aktuellen Gamestate
 class Gamestate:
 	#Todo: Implement 
-	def __init__(self):
-		self.uid
-		self.Game
-		self.player
-		self.Variant
-		self.In
-		self.Out
-		self.ActivePlayer
-		self.ThrowRound
-		self.GameState
-		self.Message
-		self.Settings
-		self.UndoLog
-		self.Podium
-		self.CricketController
+	def __init__(self, p_uid, p_Game, p_player, p_Variant, p_In, p_Out, p_ActivePlayer, p_ThrowRound, p_Gamestate, p_Settings, p_UndoLog, p_Podium):
+		self.uid = p_uid 
+		self.Game = p_Game
+		self.player = p_player
+		self.Variant = p_Variant
+		self.In = p_In
+		self.Out = p_Out
+		self.ActivePlayer = p_ActivePlayer
+		self.ThrowRound = p_ThrowRound
+		self.GameState = p_Gamestate
+		self.Settings = p_Settings
+		self.UndoLog = p_UndoLog
+		self.Podium = p_Podium
+
+
+'''
+Vergleicht den lezten Gespeicherten Spielstand, mit dem neu gefechten
+
+Bei Änderungen werden diese Automatisch umgesezt
+
+@param newGameState ein neuer Gamestate der zum Vergleich genuzt wird
+
+'''
+def checkGamestateDiff(newGameState):
+	'''
+	TODO: Implement
+	'''
+
+	return
 
 
 
@@ -102,6 +115,42 @@ def getGamestate():
 			'''
 			if spiele == "null":
 				print("WARNING: API - Es wurde noch kein Spiel erstellt - Gameupdate nicht möglich")
+			else: #Es wurden Spiele Gefunden
+				json_data = json.loads(spiele_request.text)
+				#print(json.dumps( json_data[len(json_data)-1] ,indent=4))
+
+				#identifiziere das neuste Spiel, aka das mit höchster uid
+				max_uid = 0
+				max_index = 0
+				for i in range(len(json_data)):
+					if int(json_data[i].get('uid')) > max_uid:
+						max_uid = int(json_data[i].get('uid'))
+						max_index = i
+
+
+				last_game = json_data[max_index]#Der lezte Datensatz. ACHTUNG muss noch geändert werden, da dieser lieder nicht automatisch das neuste Spiel ist
+
+				uid = last_game.get('uid')
+				game = last_game.get('game')
+				player = last_game.get('player')
+				variant = last_game.get('variant')
+				In = last_game.get('in')
+				Out = last_game.get('out')
+				activePlayer = last_game.get('GameObject').get('Base').get('ActivePlayer')
+				throwRound = last_game.get('GameObject').get('Base').get('ThrowRound')
+				gameState = last_game.get('GameObject').get('Base').get('GameState')
+				settings = last_game.get('GameObject').get('Base').get('Settings')
+				undoLog = last_game.get('GameObject').get('Base').get('UndoLog')
+				podium = last_game.get('GameObject').get('Base').get('Podium')
+				game = Gamestate(uid,game,player,variant,In,Out,activePlayer,throwRound,gameState,settings,undoLog,podium)
+
+				#for attr, value in vars(game).items():#Zum prüfen des Objekte
+					#print(f"{attr}: {value}")
+				global last_game_State
+				if last_game_State is not None:# Dürfte nur beim aller ersten Fetch None sein (da da noch kein Objekt gelesen wurde)
+					None;
+				else:
+					last_game_State = game #Setzte den Initialen Gamestate
 		except requests.exceptions.ConnectionError:
 			print("ERROR: API - Scheinbar ist die Verbindung zur API abgebrochen")
 		time.sleep(3)#Wartet 3 Sekunden bis zur nächsten Gamestate Prüfung
@@ -111,7 +160,7 @@ def getGamestate():
 #--------------------------------
 
 
-# Einfach nurn dictionary zur Schöneren ausgabe der Empfangenden Werte
+# Einfach nurn dictionary zur Schöneren Ausgabe der Empfangenden Werte
 dict_punkte = {
 	"1" : 'single',
 	"2" : 'double',
@@ -140,6 +189,13 @@ def evalArduinoMsg(arduinoMsg):
 						a) den Gamestate zu aktualisieren
 						b) Die Daten an die API zu senden
 			'''
+			
+
+			#a) Aktualisierung des Gamestates
+				#Todo Implement
+
+			#b) Sende Daten an API
+				#Todo Implement
 			None
 
 		else:
@@ -210,7 +266,7 @@ def checkConnections():
 
 
 def main():
-	print("INFO: Starte OnOffDart-Service")
+	print("INIT: Starte OnOffDart-Service")
 
 	#Einstellungen für die Serielle Verbindung zum Arduino
 	serial_conn.baudrate = BAUD_RATE
@@ -218,7 +274,7 @@ def main():
 	serial.timeout = SERIAL_TIMEOUT
 
 	if checkConnections():
-		print("INFO: Alle Komponenten scheinen erreichbar zu sein. Setze Fort")
+		print("INIT: Alle Komponenten scheinen erreichbar zu sein. Setze Fort")
 		arduinoKommunikationsThread = threading.Thread(target=arduinoSchnittstelle)
 		arduinoKommunikationsThread.start() #Starte Arduino Thread
 		updateGameStateThread = threading.Thread(target=getGamestate)

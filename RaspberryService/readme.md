@@ -13,6 +13,11 @@ Da wir in der aktuellen version nur von einem einzigen Spiel ausgehen (und nicht
 parralell gespielten, kann der einfachheit halber immer das neuste erstellte Spiel, als das aktuelle an genommen werden)
 Das Program fragt zyklisch (z.B. alle 3 Sekunden) den aktuellen Gamestate ab.
 
+UPDATE (02.06.2024): Da jezt im Frontend die UIDs nurnoch fest mit inkrementierenden Zähler erstellt werde,
+kann einfach ausgelesen werden, welche UID der gefundenen Spiele den höchsten Zählr hat, um fest zu stellen, 
+welches das aktuelle aktive Spiel ist
+
+
 
 Daher werden folgende API funktionalitäten vom Program benötigt:
   - GET  /game := Um die Game id des aktuellsten Spiels heraus zu finden
@@ -22,10 +27,10 @@ Daher werden folgende API funktionalitäten vom Program benötigt:
 
 Aktuelle Todos:
 - [ ] Arduino-Pi Schnittstelle
-  - [ ] Auswertung der Arduino Nachrichten
+  - [x] Auswertung der Arduino Nachrichten
   - [ ] Bestimmung des jewiligen Gamestates und berechnung des nächsten basierend auf empfangenden Daten
   - [ ] Gamestate updates an die API senden
-- [ ] Gamestate Updates von der API abfragen
+  - [ ] Gamestate Updates von der API abfragen
 - [ ] LED Steuerung
 - [ ] Camera Linien erkennung und verarbeitung
 - [ ] Camera Feed wird an Server weitergesendet
