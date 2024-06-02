@@ -4,10 +4,27 @@ Hier landet das Python Program, welches auf dem Raspberry pi läuft, und folgend
 - Weiterleitung des Onboard Kamera Feeds ans Backend 
 - Steuerung der LEDs basierend auf aktuelle Ereignisse etc.
 
+
+Ergänzung zur Arduino/Api Schnittstelle:
+Das Program hier soll  die Daten vom Arduino entgegen nehmen, und an die API senden. 
+Damit die Zustände Zwischen der Api und dem Pi Synchronisiert werden können, müssen aber einige hilfsfunktionen
+implementiert werden, die den Aktuellen Gamestate von der API abfragen, convertieren, und dann intern nutzen.
+Da wir in der aktuellen version nur von einem einzigen Spiel ausgehen (und nicht von meheren 
+parralell gespielten, kann der einfachheit halber immer das neuste erstellte Spiel, als das aktuelle an genommen werden)
+Das Program fragt zyklisch (z.B. alle 3 Sekunden) den aktuellen Gamestate ab.
+
+
+Daher werden folgende API funktionalitäten vom Program benötigt:
+  - GET  /game := Um die Game id des aktuellsten Spiels heraus zu finden
+  - GET  /game/id := Um den aktuellen Zustand des Spiels zu ermitteln
+  - POST /game/{id}/throw/{number}/{modifier} := Um einen Wurf für das Spiel an die API zu übermitteln
+  - POST /game/{id}/undo := Um die lezte aktion Rückgängig zu machen, falls z.B. ein Fehlwurf festgestellt wurde
+
 Aktuelle Todos:
 - [ ] Arduino-Pi Schnittstelle
-  - [ ] Auswertung der Arduino Nachrichten + Versand an API
-  - [ ] Übermittlung nötiger Steuerbefehle an den Arduino
+  - [ ] Auswertung der Arduino Nachrichten
+  - [ ] Bestimmung des jewiligen Gamestates und berechnung des nächsten absierend auf empfangenden Daten
+  - [ ] Gamestate updates an die API senden
 - [ ] LED Steuerung
 - [ ] Camera Linien erkennung und verarbeitung
 - [ ] Camera Feed wird an Server weitergesendet
