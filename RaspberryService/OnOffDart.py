@@ -85,6 +85,9 @@ class Gamestate:
 
 '''
 Ermittelt den Gamestate für das aktuelle Spiel von der API. Und sezt alle Parameter entsprechend
+Nötig, da der Pi ja nicht bei Änderungen durch das Frontend im Backend informiert wird.
+Daher ist eine Regelmässige Abfrage nötig um den aktuellen Spielstand zu ermitteln.
+Es muss angenommen werden, dass neuste erstellte Spiel das aktuell laufende ist
 '''
 def getGamestate():
 	while 1:
@@ -101,7 +104,7 @@ def getGamestate():
 				print("WARNING: API - Es wurde noch kein Spiel erstellt - Gameupdate nicht möglich")
 		except requests.exceptions.ConnectionError:
 			print("ERROR: API - Scheinbar ist die Verbindung zur API abgebrochen")
-		time.sleep(3)#Warted 3ne Sekunden bis zum nächsten Gamestate Check
+		time.sleep(3)#Wartet 3 Sekunden bis zur nächsten Gamestate Prüfung
 	return
 
 
@@ -119,6 +122,7 @@ dict_punkte = {
 '''
 Interpretiert eine erhaltene Serial Nachricht vom Arduino. Und passt entsprechend alles nötige an
 aka Aktualisiert den Gamestate lokal, und sendet auch falls nötig die Daten an die API
+
 @param arduinoMsg die auszuwertende Nachricht
 '''
 def evalArduinoMsg(arduinoMsg):
@@ -142,7 +146,6 @@ def evalArduinoMsg(arduinoMsg):
 			print("WARNING: Arduino - Es wurde eine invalide Punktezahl vom Arduino empfangen: " + arduinoMsg)
 	elif arduinoMsg == "m": #Es wurde ein Fehlwurf Festgestellt
 		print("INFO: Arduino - Es wurde ein Fehlwurf vom Arduino Festgestellt")
-		#Todo Implement
 		'''
 			Todo:
 				sende die Entsprechende information über den Fehlwurf an die API
@@ -155,7 +158,7 @@ def evalArduinoMsg(arduinoMsg):
 
 '''
 Stellt den Überliegenden Process für die Arduino - API Kommunikation dar.
-Aka liest die Daten des Arduinos aus, und leited diese an die API weiter
+Aka liest die Daten des Arduinos aus, und verarbeited diese entsprechend
 '''
 def arduinoSchnittstelle():
 	try:
@@ -197,6 +200,12 @@ def checkConnections():
 	except requests.exceptions.ConnectionError:
 		print("ERROR: Es konnte keine Korrekte Verbindung zur API aufgebaut werden. Bitte Prüfen Sie, ob sie deren erreichbarkeit, und ob alle Services laufen")
 		return False
+
+	'''
+	Todo:
+		implementiere fehlende prüfunktionen Funktionen
+	'''
+
 	return True
 
 
@@ -217,6 +226,15 @@ def main():
 		
 	else:
 		print("ERROR: Es gab ein Problem bei einer der Komponenten, das Program kann so leider nicht fortfahren.")
+
+	'''
+	Todo: 
+		Baue am besten einen Prüfmechnanismus ein, um permanent zu prüfen, ob noch alle benötigten Verbindungen stehen 
+		(wird teilweise in den functionen gemacht, sollte aber bei denen ausgelagert, und besser zentral geregelt werden 
+		-> starte dann auch die abgestürzten Threads neu, um nen Regelmässigen check zu haben)
+		Idealerweise gibts nen Daemon, welcher alle X Sekunden alle Verbindungen prüft, und das Program bei Problemen Pausiert
+		den Nutzer informiert, und bei wieder stehender Verbindung fortsezt
+	'''
 	return
 
 
