@@ -108,13 +108,6 @@ def getGamestate():
 #--------------------------------
 
 
-'''
-Empfängt Daten vom Arduino via USB Serial
-'''
-#Todo: Implement
-def recvArduino():
-	return
-
 # Einfach nurn dictionary zur Schöneren ausgabe der Empfangenden Werte
 dict_punkte = {
 	"1" : 'single',
@@ -124,7 +117,9 @@ dict_punkte = {
 }
 
 '''
-Interpretiert eine erhaltene Serial Nachricht vom Arduino
+Interpretiert eine erhaltene Serial Nachricht vom Arduino. Und passt entsprechend alles nötige an
+aka Aktualisiert den Gamestate lokal, und sendet auch falls nötig die Daten an die API
+@param arduinoMsg die auszuwertende Nachricht
 '''
 def evalArduinoMsg(arduinoMsg):
 	if arduinoMsg.isnumeric(): #Es wird ein Zahlenwert empfangen
@@ -148,6 +143,10 @@ def evalArduinoMsg(arduinoMsg):
 	elif arduinoMsg == "m": #Es wurde ein Fehlwurf Festgestellt
 		print("INFO: Arduino - Es wurde ein Fehlwurf vom Arduino Festgestellt")
 		#Todo Implement
+		'''
+			Todo:
+				sende die Entsprechende information über den Fehlwurf an die API
+		'''
 		None
 	else:
 		print("WARNING: Arduino - Es wurde eine invalide Nachricht vom Arduino empfangen: " + arduinoMsg)
