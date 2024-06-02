@@ -18,12 +18,15 @@ kann einfach ausgelesen werden, welche UID der gefundenen Spiele den höchsten Z
 welches das aktuelle aktive Spiel ist
 
 
+UPDATE (03.06.2024): Ein Fehlwurf wird erstmal als ein Wurf mit 0 Punkten behandelt
+
+
 
 Daher werden folgende API funktionalitäten vom Program benötigt:
   - GET  /game := Um die Game id des aktuellsten Spiels heraus zu finden
   - GET  /game/id := Um den aktuellen Zustand des Spiels zu ermitteln
   - POST /game/{id}/throw/{number}/{modifier} := Um einen Wurf für das Spiel an die API zu übermitteln
-  - POST /game/{id}/undo := Um die lezte aktion Rückgängig zu machen, falls z.B. ein Fehlwurf festgestellt wurde
+  - POST /game/{id}/undo := Um die lezte aktion Rückgängig zu machen, falls z.B. ein Fehlwurf festgestellt wurde [WIRD SO NICHT GENUZT AKTUELL]
 
 Aktuelle Todos:
 - [ ] Arduino-Pi Schnittstelle

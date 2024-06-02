@@ -11,7 +11,7 @@ ARDUINO_PORT = "COM8" #Der Port an welchem Der Arduino via USB angeschlossen ist
 BAUD_RATE = 9600 #Die Baud Rate für die Arduino-USB-Serial Verbindnung
 SERIAL_TIMEOUT = 3#Der Maximal zulässige Tiemout für die Serielle Verbindung
 
-GAME_STATE_UPDATE_TIMER = 5#Nach wievielen Sekunden beim Backend für Veränderungen angefragt werden soll
+GAME_STATE_UPDATE_TIMER = 15#Nach wievielen Sekunden beim Backend für Veränderungen angefragt werden soll
 
 API_SERVER_DOMAIN = "https://api.dascr.local/api"#Die Domain des API-Servers
 
@@ -101,12 +101,50 @@ def getCurrentPlayer(gameState):
 
 
 '''
-Gibt vom aktiven Spieler die gesammtzahl an bisherigen Würfen zurück
+Gibt vom zu prüfenden Spieler die gesammtzahl an bisherigen Würfen zurück
 @param player Der zu Prüfende Spieler als json
 @return die Gesammtzahl an bisherigen Würfen als Integer
 '''
 def getCurrentPlayerThrows(player):
 	return int(player['TotalThrowCount'])
+
+'''
+Gibt vom zu prüfenden Spieler die gesammtzahl an bisherigen Punkten zurück
+@param player Der zu Prüfende Spieler als json
+@return die Gesammtzahl an bisherigen Punkten als Integer
+'''
+def getCurrentPlayerThrowSum(player):
+	return int(player['ThrowSum'])	
+
+'''
+Gibt vom zu prüfenden Spieler den Punkteschnitt zurück
+@param player Der zu Prüfende Spieler als json
+@return Der Punkteschnitt als float
+'''
+def getCurrentPlayerThrowAverage(player):
+	return float(player['Average'])
+
+
+'''
+Wechselt vom Spiel mit UID den Spieler manuell + Aktualisiert den lokalen Gamestate
+@param uid Die Uid des Spiels in dem der Spieler wechseln soll
+@param debug zeigt Debug Nachrichten an (True/False)
+'''
+def changePlayer(uid, debug):
+	try:
+		req_url = f"{API_SERVER_DOMAIN}/game/{uid}/nextPlayer" 
+		req = requests.post(req_url, verify=False)
+		gs = fetchCurrentGamestate(False)
+		last_game_State_LOCK.acquire()# Eintritt in Critical Sektion, sperrung des last_game_States
+		last_game_State = gs#Gamestate manuell aktualisieren
+		last_game_State_LOCK.release()# Verlassen der Critical Section
+		if req.status_code == 200:
+			print(f"{getCurrentTime()} - INFO: Spielerwechsel erfolgreich" if debug else "")
+		else:
+			print(f"{getCurrentTime()} - WARNING: Spielerwechsel nicht erfolgreich" if debug else "")
+	except requests.exceptions.ConnectionError:
+		print(f"{getCurrentTime()} - ERROR: API - Scheinbar ist die Verbindung zur API abgebrochen" if debug else "")
+	return
 
 '''
 Vergleicht den lezten Gespeicherten Spielstand, mit dem neu gefechten
@@ -117,54 +155,56 @@ Bei Änderungen werden diese Automatisch umgesezt
 @param debug Ob Statusmeldungen ausgegeben werden sollen. Im normalbetrieb ja, aber bei intern angestossende fetches machen diese weniger sinn
 '''
 def checkGamestateDiff(newGameState, debug):
-	last_game_State_LOCK.acquire()# Eintritt in Critical Sektion, sperrung des last_game_States
 	global last_game_State
+	last_game_State_LOCK.acquire()# Eintritt in Critical Sektion, sperrung des last_game_States
+	gs = last_game_State
+	last_game_State_LOCK.release()# Verlassen der Critical Section
+	
 	neue_uid = int(newGameState.uid)
-	alte_uid = int(last_game_State.uid)
+	alte_uid = int(gs.uid)
 
 	if neue_uid > alte_uid: # Ein neues Spiel wurde erstellt
 		print(f"{getCurrentTime()} - WARNING: API - Es wurde ein neues Spiel erstellt. Wechsel aufs neue Spiel. Alte UID: {alte_uid}. Neue UID: {neue_uid}" if debug else "")
+		last_game_State_LOCK.acquire()# Eintritt in Critical Sektion, sperrung des last_game_States
 		last_game_State = newGameState
+		last_game_State_LOCK.release()# Verlassen der Critical Section
 	elif neue_uid == alte_uid: #Standart Zustand, aka Spiel UID gleichgeblieben
-		alt_aktuellerSpieler = getCurrentPlayer(last_game_State)
+		alt_aktuellerSpieler = getCurrentPlayer(gs)
 		neu_aktuellerSpieler = getCurrentPlayer(newGameState)
+
 		if alt_aktuellerSpieler['UID'] != neu_aktuellerSpieler['UID']: #Prüfe ob sich die Uid des aktiven Spielrs geändert hat (kann nur extern geschehen sein)
 			print(f"{getCurrentTime()} - WARNING: API - Der aktive Spieler wurde extern geändert!. Alt: {alt_aktuellerSpieler['UID']}, neu: {neu_aktuellerSpieler['UID']}. Übernehme den neuen Game State" if debug else "")
+			last_game_State_LOCK.acquire()# Eintritt in Critical Sektion, sperrung des last_game_States
 			last_game_State = newGameState
+			last_game_State_LOCK.release()# Verlassen der Critical Section
 		else: #Die Spieler wurden nicht Extern geändert 
 			if newGameState.GameState == "NEXTPLAYER": #Es muss zum nächsten Spieler gewechselt werden (da dies nicht automaitsch extern passiert)
 				print(f"{getCurrentTime()} - WARNING: Ein Spielerwechsel ist erforderlich. Sende Spielerwechsel Request an API" if debug else "")
-				try:
-					req_url = f"{API_SERVER_DOMAIN}/game/{neue_uid}/nextPlayer" 
-					req = requests.post(req_url, verify=False)
-					#Todo: Update gamestate
-					last_game_State_LOCK.release()#Critical Section Verlassen, variable kann wieder frei gegeben werden
-					last_game_State = fetchCurrentGamestate(False)#Gamestate manuell aktualisieren
-					last_game_State_LOCK.acquire()
-					if req.status_code == 200:
-						print(f"{getCurrentTime()} - INFO: Spielerwechsel erfolgreich" if debug else "")
-					else:
-						print(f"{getCurrentTime()} - WARNING: Spielerwechsel nicht erfolgreich" if debug else "")
-				except requests.exceptions.ConnectionError:
-					print(f"{getCurrentTime()} - ERROR: API - Scheinbar ist die Verbindung zur API abgebrochen" if debug else "")
+				changePlayer(neue_uid, debug)
 			else:
-				if newGameState.GameState != last_game_State.GameState: #Der Gamestate wurde extern geändert, aka ein Wurf wurde extern hinzugefügt
-					print(f"{getCurrentTime()} - WARNING: API - Der Gamestate wurde extern geändert! (alt: {last_game_State.GameState}, neu: {newGameState.GameState}). Übernehme neuen Gamestate" if debug else "")
+				if newGameState.GameState != gs.GameState: #Der Gamestate wurde extern geändert, aka ein Wurf wurde extern hinzugefügt
+					print(f"{getCurrentTime()} - WARNING: API - Der Gamestate wurde extern geändert! (alt: {gs.GameState}, neu: {newGameState.GameState}). Übernehme neuen Gamestate" if debug else "")
+					last_game_State_LOCK.acquire()# Eintritt in Critical Sektion, sperrung des last_game_States
 					last_game_State = newGameState
+					last_game_State_LOCK.release()# Verlassen der Critical Section
 				else: #Der Gamestate wurde nicht direkt extern geändert (normal zustand)
 					alt_throws = getCurrentPlayerThrows(alt_aktuellerSpieler)
 					neu_throws = getCurrentPlayerThrows(neu_aktuellerSpieler)
 					if alt_throws != neu_throws:#Es wurden beim Spieler extern würfe verändert
 						print(f"{getCurrentTime()} - WARNING: API - Bei Spieler: {neu_aktuellerSpieler['UID']} wurden extern Würfe verändert! (alte Wurfzahl: {alt_throws}, neue Wurfzahl: {neu_throws}) Übernehme neuen Gamestate" if debug else "" )
+						last_game_State_LOCK.acquire()# Eintritt in Critical Sektion, sperrung des last_game_States
 						last_game_State = newGameState
+						last_game_State_LOCK.release()# Verlassen der Critical Section
 					else: #Normalzustand. Spieler gleich, und keine andere Wurfzahl oder anderer Zustand
+						last_game_State_LOCK.acquire()# Eintritt in Critical Sektion, sperrung des last_game_States
 						last_game_State = newGameState
+						last_game_State_LOCK.release()# Verlassen der Critical Section
 						print(f"{getCurrentTime()} - INFO: API - Keine externen Spielupdates festgestellt. Alles OK")
 	else: #Die neue UID < alte UID
 		print(f'{getCurrentTime()} - ERROR: API - Das neue Spiel hat scheinabr eine niedrigere UID als das lezte. Evtl wurde das Spiel gelöscht. Wechsel auf das "neue" Spiel. Alte UID: {last_game_State.uid}. Neue UID: {newGameState.uid}')
+		last_game_State_LOCK.acquire()# Eintritt in Critical Sektion, sperrung des last_game_States
 		last_game_State = newGameState
-
-	last_game_State_LOCK.release()#Critical Section Verlassen, variable kann wieder frei gegeben werden
+		last_game_State_LOCK.release()# Verlassen der Critical Section
 	return
 
 
@@ -221,14 +261,17 @@ def fetchCurrentGamestate(debug):
 			game = Gamestate(uid,game,playerIDs,players,variant,In,Out,activePlayer,throwRound,gameState,settings,undoLog,podium)
 			#for attr, value in vars(game).items():#Zum prüfen des Objekte
 				#print(f"{attr}: {value}")
-			last_game_State_LOCK.acquire()# Eintritt in Critical Sektion, sperrung des last_game_States
+			#last_game_State_LOCK.acquire()# Eintritt in Critical Sektion, sperrung des last_game_States
 			global last_game_State
-			if last_game_State is not None:
-				last_game_State_LOCK.release()#Critical Section Verlassen, variable kann wieder frei gegeben werden
+			last_game_State_LOCK.acquire()# Eintritt in Critical Sektion, sperrung des last_game_States
+			gs = last_game_State
+			last_game_State_LOCK.release()# Verlassen der Critical Section
+			if gs is not None:
 				checkGamestateDiff(game, debug) #Prüfe ob der neue Gamestate sich irgendwie vom alten unterscheidet
 			else: # Dürfte nur beim aller ersten Fetch None sein (da da noch kein Objekt gelesen wurde)
-				last_game_State = game #Setzte den Initialen Gamestate
-				last_game_State_LOCK.release()#Critical Section Verlassen, variable kann wieder frei gegeben werden
+				last_game_State_LOCK.acquire()# Eintritt in Critical Sektion, sperrung des last_game_States
+				last_game_State = game
+				last_game_State_LOCK.release()# Verlassen der Critical Section
 
 	except requests.exceptions.ConnectionError:
 		print("{getCurrentTime()} - ERROR: API - Scheinbar ist die Verbindung zur API abgebrochen" if debug else "")
@@ -249,6 +292,9 @@ def getGamestate():
 #--------------------------------
 
 
+
+
+
 # Einfach nurn dictionary zur Schöneren Ausgabe der Empfangenden Werte
 dict_punkte = {
 	"1" : 'single',
@@ -256,6 +302,22 @@ dict_punkte = {
 	"3" : 'tripple',
 	"25": 'bull'
 }
+
+'''
+Sendet einen Wurf an die API
+@param gameUID Die UID des Piels, an welches übertragen werden soll
+@param modifier 1==Singel, 2==double, 3==Tripple, 25==bull. Wird als Zahl übergeben
+@param value Der Zahlenwert als String
+@return Gibt den Statuscode zurück
+'''
+def sendThrow(gameUID, modifier, value):
+	try:
+		req_url = f"{API_SERVER_DOMAIN}/game/{gameUID}/throw/{value}/{modifier}"
+		req = requests.post(req_url, verify=False)
+		return req.status_code
+	except requests.exceptions.ConnectionError:
+		print(f"{getCurrentTime()} - ERROR: Die API kann nicht erreicht werden")
+	return -1 #Error Code
 
 '''
 Interpretiert eine erhaltene Serial Nachricht vom Arduino. Und passt entsprechend alles nötige an
@@ -285,17 +347,54 @@ def evalArduinoMsg(arduinoMsg):
 
 			#b) Sende Daten an API
 				#Todo Implement
-			None
 
+			last_game_State_LOCK.acquire()
+			gs = last_game_State
+			last_game_State_LOCK.release()
+			if(gs is None): #Ganz am anfang noch kein Gamestate von API abgefragt
+				fetchCurrentGamestate(False)
+			curUID = str(gs.uid)
+			
+			statusCode = sendThrow(curUID, str(arduinoMsg[0]), wert)
+			
+			if statusCode == 200:
+				print(f"{getCurrentTime()} - INFO: API - Score Erfolgreich übertragen: {modifier} {wert}")
+			elif statusCode == 400:
+				print(f"{getCurrentTime()} - WARNING: API - Der Spieler hatte schon alle Würfe. Score wurde nicht hinzugefügt, Spielerwechsel folgt")
+				changePlayer(curUID, False)#Manueller Spielerwechsel
+			elif statusCode == 404:
+				print(f"{getCurrentTime()} - ERROR: API - Das Spiel mit der UID: {curUID} konnte nicht gefunden werden. Daher konnte der Score nicht übertragen werden!")
+			else:
+				print(f"{getCurrentTime()} - ERROR: API - Es gab einen unbekannten Fehler beim Übetragen des Wurfs")
+			fetchCurrentGamestate(False)#Nach änderung Gamestate manuell neu fetchen
 		else:
 			print(f"{getCurrentTime()} - WARNING: Arduino - Es wurde eine invalide Punktezahl vom Arduino empfangen: " + arduinoMsg)
 	elif arduinoMsg == "m": #Es wurde ein Fehlwurf Festgestellt
-		print(f"{getCurrentTime()} - INFO: Arduino - Es wurde ein Fehlwurf vom Arduino Festgestellt")
+		print(f"{getCurrentTime()} - INFO: Arduino - Es wurde ein Fehlwurf vom Arduino Festgestellt. Übermittle diesen an die API")
 		'''
 			Todo:
-				sende die Entsprechende information über den Fehlwurf an die API
+				sende die Entsprechende information über den Fehlwurf an die API.
+				Aktuell wird ein Fehlwurf, wie ein wurf mit 0 Punkten behandelt.
+				Wenn API ein 400 zurück gibt (Throw was not added) -> Spielerwechsel erforderlich
+				Wenn API ein 404 zurückgibt, gibts Probleme mit der Game id
+				Wenn Api ein 200 zurückgibt, ist alles ok
 		'''
-		None
+		last_game_State_LOCK.acquire()
+		gs = last_game_State
+		last_game_State_LOCK.release()
+		curUID = gs.uid
+		statusCode = sendThrow(curUID, "0", "0")
+		last_game_State_LOCK.release()
+		if statusCode == 200:
+			print(f"{getCurrentTime()} - INFO: API - Fehlwurf erfolgreich übertragen")
+		elif statusCode == 400:
+			print(f"{getCurrentTime()} - WARNING: API - Der Spieler hatte schon alle Würfe. Fehlwurf wurde nicht hinzugefügt, Spielerwechsel folgt")
+			changePlayer(curUID, False)#Manueller Spielerwechsel
+		elif statusCode == 404:
+			print(f"{getCurrentTime()} - ERROR: API - Das Spiel mit der UID: {curUID} konnte nicht gefunden werden. Daher konnte der Fehlwurf nicht übertragen werden!")
+		else:
+			print(f"{getCurrentTime()} - ERROR: API - Es gab einen unbekannten Fehler beim Übetragen des Fehlwurfs")
+		fetchCurrentGamestate(False)#Nach änderung Gamestate manuell neu fetchen
 	else:
 		print(f"{getCurrentTime()} - WARNING: Arduino - Es wurde eine invalide Nachricht vom Arduino empfangen: " + arduinoMsg)
 	return
@@ -365,7 +464,7 @@ def main():
 	if checkConnections():
 		print(f"{getCurrentTime()} - INIT: Alle Komponenten scheinen erreichbar zu sein. Setze Fort")
 		arduinoKommunikationsThread = threading.Thread(target=arduinoSchnittstelle)
-		#arduinoKommunikationsThread.start() #Starte Arduino Thread
+		arduinoKommunikationsThread.start() #Starte Arduino Thread
 		updateGameStateThread = threading.Thread(target=getGamestate)
 		updateGameStateThread.start() #Startet das Gamestate Update
 		
