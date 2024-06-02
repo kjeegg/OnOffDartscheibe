@@ -5,6 +5,7 @@ import requests
 import threading
 from requests.packages.urllib3.exceptions import InsecureRequestWarning
 import json
+from threading import Lock
 
 ARDUINO_PORT = "COM8" #Der Port an welchem Der Arduino via USB angeschlossen ist
 BAUD_RATE = 9600 #Die Baud Rate für die Arduino-USB-Serial Verbindnung
@@ -17,6 +18,7 @@ API_SERVER_DOMAIN = "https://api.dascr.local/api"#Die Domain des API-Servers
 #-----------------------------
 serial_conn = serial.Serial() #Das Objekt für die Serielle Verbindung (wird beim Verbidnugnscheck initialisiert)
 last_game_State = None #Speichert den lezten gefechten Spielzustand
+last_game_State_LOCK = Lock()#Nen Thread Lock um Race Conditions beim Zugriff auf last_game_State vorzubeugen
 
 requests.packages.urllib3.disable_warnings(InsecureRequestWarning) #Schaltet TLS warnungen aus
 #-----------------------------
@@ -105,44 +107,57 @@ Vergleicht den lezten Gespeicherten Spielstand, mit dem neu gefechten
 Bei Änderungen werden diese Automatisch umgesezt
 
 @param newGameState ein neuer Gamestate der zum Vergleich genuzt wird
-
+@param debug Ob Statusmeldungen ausgegeben werden sollen. Im normalbetrieb ja, aber bei intern angestossende fetches machen diese weniger sinn
 '''
-def checkGamestateDiff(newGameState):
+def checkGamestateDiff(newGameState, debug):
+	last_game_State_LOCK.acquire()# Eintritt in Critical Sektion, sperrung des last_game_States
 	global last_game_State
 	neue_uid = int(newGameState.uid)
 	alte_uid = int(last_game_State.uid)
 
 	if neue_uid > alte_uid: # Ein neues Spiel wurde erstellt
-		print(f"WARNING: API - Es wurde ein neues Spiel erstellt. Wechsel aufs neue Spiel. Alte UID: {alte_uid}. Neue UID: {neue_uid}")
+		print(f"WARNING: API - Es wurde ein neues Spiel erstellt. Wechsel aufs neue Spiel. Alte UID: {alte_uid}. Neue UID: {neue_uid}" if debug else "")
 		last_game_State = newGameState
-		return
 	elif neue_uid == alte_uid: #Standart Zustand, aka Spiel UID gleichgeblieben
 		alt_aktuellerSpieler = getCurrentPlayer(last_game_State)
 		neu_aktuellerSpieler = getCurrentPlayer(newGameState)
 		if alt_aktuellerSpieler['UID'] != neu_aktuellerSpieler['UID']: #Prüfe ob sich die Uid des aktiven Spielrs geändert hat (kann nur extern geschehen sein)
-			print(f"WARNING: API - Der aktive Spieler wurde extern geändert!. Alt: {alt_aktuellerSpieler['UID']}, neu: {neu_aktuellerSpieler['UID']}. Übernehme den neuen Game State")
+			print(f"WARNING: API - Der aktive Spieler wurde extern geändert!. Alt: {alt_aktuellerSpieler['UID']}, neu: {neu_aktuellerSpieler['UID']}. Übernehme den neuen Game State" if debug else "")
 			last_game_State = newGameState
-			return
 		else: #Die Spieler wurden nicht Extern geändert 
-			if newGameState.GameState != last_game_State.GameState: #Der Gamestate wurde extern geändert, aka ein Wurf wurde extern hinzugefügt
-				print("WARNING: API - Der Gamestate wurde extern geändert! Evtl hat ein Spieler extern einen Zug hinzugefügt. Übernehme neuen Gamestate")
-				last_game_State = newGameState
-				return
-			else: #Der Gamestate wurde nicht direkt extern geändert (normal zustand)
-				alt_throws = getCurrentPlayerThrows(alt_aktuellerSpieler)
-				neu_throws = getCurrentPlayerThrows(neu_aktuellerSpieler)
-				if alt_throws != neu_throws:#Es wurden beim Spieler extern würfe verändert
-					print(f"WARNING: API - Bei Spieler: {neu_aktuellerSpieler['UID']} wurden extern Würfe verändert! (alte Wurfzahl: {alt_throws}, neue Wurfzahl: {neu_throws}) Übernehme neuen Gamestate")
+			if newGameState.GameState == "NEXTPLAYER": #Es muss zum nächsten Spieler gewechselt werden (da dies nicht automaitsch extern passiert)
+				print("WARNING: Ein Spielerwechsel ist erforderlich. Sende Spielerwechsel Request an API" if debug else "")
+				try:
+					req_url = f"{API_SERVER_DOMAIN}/game/{neue_uid}/nextPlayer" 
+					req = requests.post(req_url, verify=False)
+					#Todo: Update gamestate
+					last_game_State_LOCK.release()#Critical Section Verlassen, variable kann wieder frei gegeben werden
+					last_game_State = fetchCurrentGamestate(False)#Gamestate manuell aktualisieren
+					last_game_State_LOCK.acquire()
+					if req.status_code == 200:
+						print("INFO: Spielerwechsel erfolgreich" if debug else "")
+					else:
+						print("WARNING: Spielerwechsel nicht erfolgreich" if debug else "")
+				except requests.exceptions.ConnectionError:
+					print("ERROR: API - Scheinbar ist die Verbindung zur API abgebrochen" if debug else "")
+			else:
+				if newGameState.GameState != last_game_State.GameState: #Der Gamestate wurde extern geändert, aka ein Wurf wurde extern hinzugefügt
+					print(f"WARNING: API - Der Gamestate wurde extern geändert! (alt: {last_game_State.GameState}, neu: {newGameState.GameState}). Übernehme neuen Gamestate" if debug else "")
 					last_game_State = newGameState
-					return
-				else: #Normalzustand. Spieler gleich, und keine andere Wurfzahl oder anderer Zustand
-					last_game_State = newGameState
-					print("INFO: API - Keine externen Spielupdates festgestellt. Alles OK")
-					return
+				else: #Der Gamestate wurde nicht direkt extern geändert (normal zustand)
+					alt_throws = getCurrentPlayerThrows(alt_aktuellerSpieler)
+					neu_throws = getCurrentPlayerThrows(neu_aktuellerSpieler)
+					if alt_throws != neu_throws:#Es wurden beim Spieler extern würfe verändert
+						print(f"WARNING: API - Bei Spieler: {neu_aktuellerSpieler['UID']} wurden extern Würfe verändert! (alte Wurfzahl: {alt_throws}, neue Wurfzahl: {neu_throws}) Übernehme neuen Gamestate" if debug else "" )
+						last_game_State = newGameState
+					else: #Normalzustand. Spieler gleich, und keine andere Wurfzahl oder anderer Zustand
+						last_game_State = newGameState
+						print("INFO: API - Keine externen Spielupdates festgestellt. Alles OK")
 	else: #Die neue UID < alte UID
 		print(f'ERROR: API - Das neue Spiel hat scheinabr eine niedrigere UID als das lezte. Evtl wurde das Spiel gelöscht. Wechsel auf das "neue" Spiel. Alte UID: {last_game_State.uid}. Neue UID: {newGameState.uid}')
 		last_game_State = newGameState
-		return
+
+	last_game_State_LOCK.release()#Critical Section Verlassen, variable kann wieder frei gegeben werden
 	return
 
 
@@ -152,63 +167,74 @@ Ermittelt den Gamestate für das aktuelle Spiel von der API. Und sezt alle Param
 Nötig, da der Pi ja nicht bei Änderungen durch das Frontend im Backend informiert wird.
 Daher ist eine Regelmässige Abfrage nötig um den aktuellen Spielstand zu ermitteln.
 Es wird vorausgesezt das die höchste numerische uid, die des aktuellsten Spiels ist
+
+@param debug Ob Statusmeldungen ausgegeben werden sollen. Im normalbetrieb ja, aber bei intern angestossende fetches machen diese weniger sinn
+'''
+def fetchCurrentGamestate(debug):
+	try:
+		spiele_request = requests.get(API_SERVER_DOMAIN + "/game", verify=False)#Lese lisste aller Spiele aus
+		spiele = (spiele_request.text).strip()
+		'''
+		Todo:
+			- Extrahiere aktuellstes Spiel (höchste UID im json)
+			- Lese die entsprechenden Daten aus speicehr in nem GameState Objekt, und vergleiche mit leztem Gamestate
+			- Bei Gamestate änderungen oder gar nem Neuen Spiel, aktualisiere (falls nötig)
+		'''
+		if spiele == "null":
+			print("WARNING: API - Es wurde noch kein Spiel erstellt - Gameupdate nicht möglich" if debug else "")
+		else: #Es wurden Spiele Gefunden
+			json_data = json.loads(spiele_request.text)
+			#print(json.dumps( json_data[len(json_data)-1] ,indent=4))
+			#identifiziere das neuste Spiel, aka das mit höchster uid
+			max_uid = 0
+			max_index = 0
+			
+			for i in range(len(json_data)):
+				try:
+					if int(json_data[i].get('uid')) > max_uid:
+						max_uid = int(json_data[i].get('uid'))
+						max_index = i
+				except ValueError:
+					print(f"WARNING: API - EINE Nicht numerische UID wurde gefunden: {json_data[i].get('uid')} . Skippe diese (bitte entfernen dieser falls möglich)"  if debug else "")
+
+			last_game = json_data[max_index]#Der lezte Datensatz. ACHTUNG muss noch geändert werden, da dieser lieder nicht automatisch das neuste Spiel ist
+			uid = last_game.get('uid')
+			game = last_game.get('game')
+			playerIDs = last_game.get('player')
+			players = last_game.get('GameObject').get('Base').get("Player")
+			variant = last_game.get('variant')
+			In = last_game.get('in')
+			Out = last_game.get('out')
+			activePlayer = last_game.get('GameObject').get('Base').get('ActivePlayer')
+			throwRound = last_game.get('GameObject').get('Base').get('ThrowRound')
+			gameState = last_game.get('GameObject').get('Base').get('GameState')
+			settings = last_game.get('GameObject').get('Base').get('Settings')
+			undoLog = last_game.get('GameObject').get('Base').get('UndoLog')
+			podium = last_game.get('GameObject').get('Base').get('Podium')
+			game = Gamestate(uid,game,playerIDs,players,variant,In,Out,activePlayer,throwRound,gameState,settings,undoLog,podium)
+			#for attr, value in vars(game).items():#Zum prüfen des Objekte
+				#print(f"{attr}: {value}")
+			last_game_State_LOCK.acquire()# Eintritt in Critical Sektion, sperrung des last_game_States
+			global last_game_State
+			if last_game_State is not None:
+				last_game_State_LOCK.release()#Critical Section Verlassen, variable kann wieder frei gegeben werden
+				checkGamestateDiff(game, debug) #Prüfe ob der neue Gamestate sich irgendwie vom alten unterscheidet
+			else: # Dürfte nur beim aller ersten Fetch None sein (da da noch kein Objekt gelesen wurde)
+				last_game_State = game #Setzte den Initialen Gamestate
+				last_game_State_LOCK.release()#Critical Section Verlassen, variable kann wieder frei gegeben werden
+
+	except requests.exceptions.ConnectionError:
+		print("ERROR: API - Scheinbar ist die Verbindung zur API abgebrochen" if debug else "")
+	return
+
+
+
+'''
+Führt regelmässige Spielstand abfragen zur API durch
 '''
 def getGamestate():
 	while 1:
-		try:
-			spiele_request = requests.get(API_SERVER_DOMAIN + "/game", verify=False)#Lese lisste aller Spiele aus
-			spiele = (spiele_request.text).strip()
-			'''
-			Todo:
-				- Extrahiere aktuellstes Spiel (höchste UID im json)
-				- Lese die entsprechenden Daten aus speicehr in nem GameState Objekt, und vergleiche mit leztem Gamestate
-				- Bei Gamestate änderungen oder gar nem Neuen Spiel, aktualisiere (falls nötig)
-			'''
-			if spiele == "null":
-				print("WARNING: API - Es wurde noch kein Spiel erstellt - Gameupdate nicht möglich")
-			else: #Es wurden Spiele Gefunden
-				json_data = json.loads(spiele_request.text)
-				#print(json.dumps( json_data[len(json_data)-1] ,indent=4))
-
-				#identifiziere das neuste Spiel, aka das mit höchster uid
-				max_uid = 0
-				max_index = 0
-				
-				for i in range(len(json_data)):
-					try:
-						if int(json_data[i].get('uid')) > max_uid:
-							max_uid = int(json_data[i].get('uid'))
-							max_index = i
-					except ValueError:
-						print(f"WARNING: API - EINE Nicht numerische UID wurde gefunden: {json_data[i].get('uid')} . Skippe diese (bitte entfernen dieser falls möglich)")
-
-
-				last_game = json_data[max_index]#Der lezte Datensatz. ACHTUNG muss noch geändert werden, da dieser lieder nicht automatisch das neuste Spiel ist
-
-				uid = last_game.get('uid')
-				game = last_game.get('game')
-				playerIDs = last_game.get('player')
-				players = last_game.get('GameObject').get('Base').get("Player")
-				variant = last_game.get('variant')
-				In = last_game.get('in')
-				Out = last_game.get('out')
-				activePlayer = last_game.get('GameObject').get('Base').get('ActivePlayer')
-				throwRound = last_game.get('GameObject').get('Base').get('ThrowRound')
-				gameState = last_game.get('GameObject').get('Base').get('GameState')
-				settings = last_game.get('GameObject').get('Base').get('Settings')
-				undoLog = last_game.get('GameObject').get('Base').get('UndoLog')
-				podium = last_game.get('GameObject').get('Base').get('Podium')
-				game = Gamestate(uid,game,playerIDs,players,variant,In,Out,activePlayer,throwRound,gameState,settings,undoLog,podium)
-
-				#for attr, value in vars(game).items():#Zum prüfen des Objekte
-					#print(f"{attr}: {value}")
-				global last_game_State
-				if last_game_State is not None:
-					checkGamestateDiff(game) #Prüfe ob der neue Gamestate sich irgendwie vom alten unterscheidet
-				else: # Dürfte nur beim aller ersten Fetch None sein (da da noch kein Objekt gelesen wurde)
-					last_game_State = game #Setzte den Initialen Gamestate
-		except requests.exceptions.ConnectionError:
-			print("ERROR: API - Scheinbar ist die Verbindung zur API abgebrochen")
+		fetchCurrentGamestate(True)
 		time.sleep(GAME_STATE_UPDATE_TIMER)#Wartet X Sekunden bis zur nächsten Gamestate Prüfung
 	return
 
