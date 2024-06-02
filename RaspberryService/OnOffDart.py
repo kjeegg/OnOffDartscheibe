@@ -10,6 +10,8 @@ ARDUINO_PORT = "COM8" #Der Port an welchem Der Arduino via USB angeschlossen ist
 BAUD_RATE = 9600 #Die Baud Rate für die Arduino-USB-Serial Verbindnung
 SERIAL_TIMEOUT = 3#Der Maximal zulässige Tiemout für die Serielle Verbindung
 
+GAME_STATE_UPDATE_TIMER = 5#Nach wievielen Sekunden beim Backend für Veränderungen angefragt werden soll
+
 API_SERVER_DOMAIN = "https://api.dascr.local/api"#Die Domain des API-Servers
 
 #-----------------------------
@@ -64,9 +66,10 @@ def enableLEDs():
 #Repräsentiert den aktuellen Gamestate
 class Gamestate:
 	#Todo: Implement 
-	def __init__(self, p_uid, p_Game, p_player, p_Variant, p_In, p_Out, p_ActivePlayer, p_ThrowRound, p_Gamestate, p_Settings, p_UndoLog, p_Podium):
+	def __init__(self, p_uid, p_Game, p_playerIDs, p_player, p_Variant, p_In, p_Out, p_ActivePlayer, p_ThrowRound, p_Gamestate, p_Settings, p_UndoLog, p_Podium):
 		self.uid = p_uid 
 		self.Game = p_Game
+		self.playerIDs = p_playerIDs
 		self.player = p_player
 		self.Variant = p_Variant
 		self.In = p_In
@@ -80,6 +83,23 @@ class Gamestate:
 
 
 '''
+Gibt vom einem Gamestate den Aktiven Spieler zurück
+@param gameState der zu nuzende Gamestate
+@return Der aktive Spieler als json Objekt
+'''
+def getCurrentPlayer(gameState):
+	return gameState.player[gameState.ActivePlayer]
+
+
+'''
+Gibt vom aktiven Spieler die gesammtzahl an bisherigen Würfen zurück
+@param player Der zu Prüfende Spieler als json
+@return die Gesammtzahl an bisherigen Würfen als Integer
+'''
+def getCurrentPlayerThrows(player):
+	return int(player['TotalThrowCount'])
+
+'''
 Vergleicht den lezten Gespeicherten Spielstand, mit dem neu gefechten
 
 Bei Änderungen werden diese Automatisch umgesezt
@@ -88,10 +108,41 @@ Bei Änderungen werden diese Automatisch umgesezt
 
 '''
 def checkGamestateDiff(newGameState):
-	'''
-	TODO: Implement
-	'''
+	global last_game_State
+	neue_uid = int(newGameState.uid)
+	alte_uid = int(last_game_State.uid)
 
+	if neue_uid > alte_uid: # Ein neues Spiel wurde erstellt
+		print(f"WARNING: API - Es wurde ein neues Spiel erstellt. Wechsel aufs neue Spiel. Alte UID: {alte_uid}. Neue UID: {neue_uid}")
+		last_game_State = newGameState
+		return
+	elif neue_uid == alte_uid: #Standart Zustand, aka Spiel UID gleichgeblieben
+		alt_aktuellerSpieler = getCurrentPlayer(last_game_State)
+		neu_aktuellerSpieler = getCurrentPlayer(newGameState)
+		if alt_aktuellerSpieler['UID'] != neu_aktuellerSpieler['UID']: #Prüfe ob sich die Uid des aktiven Spielrs geändert hat (kann nur extern geschehen sein)
+			print(f"WARNING: API - Der aktive Spieler wurde extern geändert!. Alt: {alt_aktuellerSpieler['UID']}, neu: {neu_aktuellerSpieler['UID']}. Übernehme den neuen Game State")
+			last_game_State = newGameState
+			return
+		else: #Die Spieler wurden nicht Extern geändert 
+			if newGameState.GameState != last_game_State.GameState: #Der Gamestate wurde extern geändert, aka ein Wurf wurde extern hinzugefügt
+				print("WARNING: API - Der Gamestate wurde extern geändert! Evtl hat ein Spieler extern einen Zug hinzugefügt. Übernehme neuen Gamestate")
+				last_game_State = newGameState
+				return
+			else: #Der Gamestate wurde nicht direkt extern geändert (normal zustand)
+				alt_throws = getCurrentPlayerThrows(alt_aktuellerSpieler)
+				neu_throws = getCurrentPlayerThrows(neu_aktuellerSpieler)
+				if alt_throws != neu_throws:#Es wurden beim Spieler extern würfe verändert
+					print(f"WARNING: API - Bei Spieler: {neu_aktuellerSpieler['UID']} wurden extern Würfe verändert! (alte Wurfzahl: {alt_throws}, neue Wurfzahl: {neu_throws}) Übernehme neuen Gamestate")
+					last_game_State = newGameState
+					return
+				else: #Normalzustand. Spieler gleich, und keine andere Wurfzahl oder anderer Zustand
+					last_game_State = newGameState
+					print("INFO: API - Keine externen Spielupdates festgestellt. Alles OK")
+					return
+	else: #Die neue UID < alte UID
+		print(f'ERROR: API - Das neue Spiel hat scheinabr eine niedrigere UID als das lezte. Evtl wurde das Spiel gelöscht. Wechsel auf das "neue" Spiel. Alte UID: {last_game_State.uid}. Neue UID: {newGameState.uid}')
+		last_game_State = newGameState
+		return
 	return
 
 
@@ -100,7 +151,7 @@ def checkGamestateDiff(newGameState):
 Ermittelt den Gamestate für das aktuelle Spiel von der API. Und sezt alle Parameter entsprechend
 Nötig, da der Pi ja nicht bei Änderungen durch das Frontend im Backend informiert wird.
 Daher ist eine Regelmässige Abfrage nötig um den aktuellen Spielstand zu ermitteln.
-Es muss angenommen werden, dass neuste erstellte Spiel das aktuell laufende ist
+Es wird vorausgesezt das die höchste numerische uid, die des aktuellsten Spiels ist
 '''
 def getGamestate():
 	while 1:
@@ -109,9 +160,9 @@ def getGamestate():
 			spiele = (spiele_request.text).strip()
 			'''
 			Todo:
-				- Extrahiere aktuellstes Spiel (lezter Eintrag im JSON)
+				- Extrahiere aktuellstes Spiel (höchste UID im json)
 				- Lese die entsprechenden Daten aus speicehr in nem GameState Objekt, und vergleiche mit leztem Gamestate
-				- Bei Gamestate änderungen oder gar nem Neuen Spiel, aktualisiere (falls nötig für den Arduino etc)
+				- Bei Gamestate änderungen oder gar nem Neuen Spiel, aktualisiere (falls nötig)
 			'''
 			if spiele == "null":
 				print("WARNING: API - Es wurde noch kein Spiel erstellt - Gameupdate nicht möglich")
@@ -122,17 +173,22 @@ def getGamestate():
 				#identifiziere das neuste Spiel, aka das mit höchster uid
 				max_uid = 0
 				max_index = 0
+				
 				for i in range(len(json_data)):
-					if int(json_data[i].get('uid')) > max_uid:
-						max_uid = int(json_data[i].get('uid'))
-						max_index = i
+					try:
+						if int(json_data[i].get('uid')) > max_uid:
+							max_uid = int(json_data[i].get('uid'))
+							max_index = i
+					except ValueError:
+						print(f"WARNING: API - EINE Nicht numerische UID wurde gefunden: {json_data[i].get('uid')} . Skippe diese (bitte entfernen dieser falls möglich)")
 
 
 				last_game = json_data[max_index]#Der lezte Datensatz. ACHTUNG muss noch geändert werden, da dieser lieder nicht automatisch das neuste Spiel ist
 
 				uid = last_game.get('uid')
 				game = last_game.get('game')
-				player = last_game.get('player')
+				playerIDs = last_game.get('player')
+				players = last_game.get('GameObject').get('Base').get("Player")
 				variant = last_game.get('variant')
 				In = last_game.get('in')
 				Out = last_game.get('out')
@@ -142,18 +198,18 @@ def getGamestate():
 				settings = last_game.get('GameObject').get('Base').get('Settings')
 				undoLog = last_game.get('GameObject').get('Base').get('UndoLog')
 				podium = last_game.get('GameObject').get('Base').get('Podium')
-				game = Gamestate(uid,game,player,variant,In,Out,activePlayer,throwRound,gameState,settings,undoLog,podium)
+				game = Gamestate(uid,game,playerIDs,players,variant,In,Out,activePlayer,throwRound,gameState,settings,undoLog,podium)
 
 				#for attr, value in vars(game).items():#Zum prüfen des Objekte
 					#print(f"{attr}: {value}")
 				global last_game_State
-				if last_game_State is not None:# Dürfte nur beim aller ersten Fetch None sein (da da noch kein Objekt gelesen wurde)
-					None;
-				else:
+				if last_game_State is not None:
+					checkGamestateDiff(game) #Prüfe ob der neue Gamestate sich irgendwie vom alten unterscheidet
+				else: # Dürfte nur beim aller ersten Fetch None sein (da da noch kein Objekt gelesen wurde)
 					last_game_State = game #Setzte den Initialen Gamestate
 		except requests.exceptions.ConnectionError:
 			print("ERROR: API - Scheinbar ist die Verbindung zur API abgebrochen")
-		time.sleep(3)#Wartet 3 Sekunden bis zur nächsten Gamestate Prüfung
+		time.sleep(GAME_STATE_UPDATE_TIMER)#Wartet X Sekunden bis zur nächsten Gamestate Prüfung
 	return
 
 
@@ -276,7 +332,7 @@ def main():
 	if checkConnections():
 		print("INIT: Alle Komponenten scheinen erreichbar zu sein. Setze Fort")
 		arduinoKommunikationsThread = threading.Thread(target=arduinoSchnittstelle)
-		arduinoKommunikationsThread.start() #Starte Arduino Thread
+		#arduinoKommunikationsThread.start() #Starte Arduino Thread
 		updateGameStateThread = threading.Thread(target=getGamestate)
 		updateGameStateThread.start() #Startet das Gamestate Update
 		
