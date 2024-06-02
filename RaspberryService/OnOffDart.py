@@ -85,6 +85,13 @@ class Gamestate:
 
 
 '''
+Erzeugt einen aktuellen Timestamp
+@Der aktuelle Timestamp im Format: TT-MM-YYYY hh-mm-ss als String
+'''
+def getCurrentTime():
+	return str(time.strftime("%d-%m-%Y %H:%M:%S", time.localtime(time.time())))
+
+'''
 Gibt vom einem Gamestate den Aktiven Spieler zurück
 @param gameState der zu nuzende Gamestate
 @return Der aktive Spieler als json Objekt
@@ -116,17 +123,17 @@ def checkGamestateDiff(newGameState, debug):
 	alte_uid = int(last_game_State.uid)
 
 	if neue_uid > alte_uid: # Ein neues Spiel wurde erstellt
-		print(f"WARNING: API - Es wurde ein neues Spiel erstellt. Wechsel aufs neue Spiel. Alte UID: {alte_uid}. Neue UID: {neue_uid}" if debug else "")
+		print(f"{getCurrentTime()} - WARNING: API - Es wurde ein neues Spiel erstellt. Wechsel aufs neue Spiel. Alte UID: {alte_uid}. Neue UID: {neue_uid}" if debug else "")
 		last_game_State = newGameState
 	elif neue_uid == alte_uid: #Standart Zustand, aka Spiel UID gleichgeblieben
 		alt_aktuellerSpieler = getCurrentPlayer(last_game_State)
 		neu_aktuellerSpieler = getCurrentPlayer(newGameState)
 		if alt_aktuellerSpieler['UID'] != neu_aktuellerSpieler['UID']: #Prüfe ob sich die Uid des aktiven Spielrs geändert hat (kann nur extern geschehen sein)
-			print(f"WARNING: API - Der aktive Spieler wurde extern geändert!. Alt: {alt_aktuellerSpieler['UID']}, neu: {neu_aktuellerSpieler['UID']}. Übernehme den neuen Game State" if debug else "")
+			print(f"{getCurrentTime()} - WARNING: API - Der aktive Spieler wurde extern geändert!. Alt: {alt_aktuellerSpieler['UID']}, neu: {neu_aktuellerSpieler['UID']}. Übernehme den neuen Game State" if debug else "")
 			last_game_State = newGameState
 		else: #Die Spieler wurden nicht Extern geändert 
 			if newGameState.GameState == "NEXTPLAYER": #Es muss zum nächsten Spieler gewechselt werden (da dies nicht automaitsch extern passiert)
-				print("WARNING: Ein Spielerwechsel ist erforderlich. Sende Spielerwechsel Request an API" if debug else "")
+				print(f"{getCurrentTime()} - WARNING: Ein Spielerwechsel ist erforderlich. Sende Spielerwechsel Request an API" if debug else "")
 				try:
 					req_url = f"{API_SERVER_DOMAIN}/game/{neue_uid}/nextPlayer" 
 					req = requests.post(req_url, verify=False)
@@ -135,26 +142,26 @@ def checkGamestateDiff(newGameState, debug):
 					last_game_State = fetchCurrentGamestate(False)#Gamestate manuell aktualisieren
 					last_game_State_LOCK.acquire()
 					if req.status_code == 200:
-						print("INFO: Spielerwechsel erfolgreich" if debug else "")
+						print(f"{getCurrentTime()} - INFO: Spielerwechsel erfolgreich" if debug else "")
 					else:
-						print("WARNING: Spielerwechsel nicht erfolgreich" if debug else "")
+						print(f"{getCurrentTime()} - WARNING: Spielerwechsel nicht erfolgreich" if debug else "")
 				except requests.exceptions.ConnectionError:
-					print("ERROR: API - Scheinbar ist die Verbindung zur API abgebrochen" if debug else "")
+					print(f"{getCurrentTime()} - ERROR: API - Scheinbar ist die Verbindung zur API abgebrochen" if debug else "")
 			else:
 				if newGameState.GameState != last_game_State.GameState: #Der Gamestate wurde extern geändert, aka ein Wurf wurde extern hinzugefügt
-					print(f"WARNING: API - Der Gamestate wurde extern geändert! (alt: {last_game_State.GameState}, neu: {newGameState.GameState}). Übernehme neuen Gamestate" if debug else "")
+					print(f"{getCurrentTime()} - WARNING: API - Der Gamestate wurde extern geändert! (alt: {last_game_State.GameState}, neu: {newGameState.GameState}). Übernehme neuen Gamestate" if debug else "")
 					last_game_State = newGameState
 				else: #Der Gamestate wurde nicht direkt extern geändert (normal zustand)
 					alt_throws = getCurrentPlayerThrows(alt_aktuellerSpieler)
 					neu_throws = getCurrentPlayerThrows(neu_aktuellerSpieler)
 					if alt_throws != neu_throws:#Es wurden beim Spieler extern würfe verändert
-						print(f"WARNING: API - Bei Spieler: {neu_aktuellerSpieler['UID']} wurden extern Würfe verändert! (alte Wurfzahl: {alt_throws}, neue Wurfzahl: {neu_throws}) Übernehme neuen Gamestate" if debug else "" )
+						print(f"{getCurrentTime()} - WARNING: API - Bei Spieler: {neu_aktuellerSpieler['UID']} wurden extern Würfe verändert! (alte Wurfzahl: {alt_throws}, neue Wurfzahl: {neu_throws}) Übernehme neuen Gamestate" if debug else "" )
 						last_game_State = newGameState
 					else: #Normalzustand. Spieler gleich, und keine andere Wurfzahl oder anderer Zustand
 						last_game_State = newGameState
-						print("INFO: API - Keine externen Spielupdates festgestellt. Alles OK")
+						print(f"{getCurrentTime()} - INFO: API - Keine externen Spielupdates festgestellt. Alles OK")
 	else: #Die neue UID < alte UID
-		print(f'ERROR: API - Das neue Spiel hat scheinabr eine niedrigere UID als das lezte. Evtl wurde das Spiel gelöscht. Wechsel auf das "neue" Spiel. Alte UID: {last_game_State.uid}. Neue UID: {newGameState.uid}')
+		print(f'{getCurrentTime()} - ERROR: API - Das neue Spiel hat scheinabr eine niedrigere UID als das lezte. Evtl wurde das Spiel gelöscht. Wechsel auf das "neue" Spiel. Alte UID: {last_game_State.uid}. Neue UID: {newGameState.uid}')
 		last_game_State = newGameState
 
 	last_game_State_LOCK.release()#Critical Section Verlassen, variable kann wieder frei gegeben werden
@@ -181,7 +188,7 @@ def fetchCurrentGamestate(debug):
 			- Bei Gamestate änderungen oder gar nem Neuen Spiel, aktualisiere (falls nötig)
 		'''
 		if spiele == "null":
-			print("WARNING: API - Es wurde noch kein Spiel erstellt - Gameupdate nicht möglich" if debug else "")
+			print(f"{getCurrentTime()} - WARNING: API - Es wurde noch kein Spiel erstellt - Gameupdate nicht möglich" if debug else "")
 		else: #Es wurden Spiele Gefunden
 			json_data = json.loads(spiele_request.text)
 			#print(json.dumps( json_data[len(json_data)-1] ,indent=4))
@@ -195,7 +202,7 @@ def fetchCurrentGamestate(debug):
 						max_uid = int(json_data[i].get('uid'))
 						max_index = i
 				except ValueError:
-					print(f"WARNING: API - EINE Nicht numerische UID wurde gefunden: {json_data[i].get('uid')} . Skippe diese (bitte entfernen dieser falls möglich)"  if debug else "")
+					print(f"{getCurrentTime()} - WARNING: API - EINE Nicht numerische UID wurde gefunden: {json_data[i].get('uid')} . Skippe diese (bitte entfernen dieser falls möglich)"  if debug else "")
 
 			last_game = json_data[max_index]#Der lezte Datensatz. ACHTUNG muss noch geändert werden, da dieser lieder nicht automatisch das neuste Spiel ist
 			uid = last_game.get('uid')
@@ -224,7 +231,7 @@ def fetchCurrentGamestate(debug):
 				last_game_State_LOCK.release()#Critical Section Verlassen, variable kann wieder frei gegeben werden
 
 	except requests.exceptions.ConnectionError:
-		print("ERROR: API - Scheinbar ist die Verbindung zur API abgebrochen" if debug else "")
+		print("{getCurrentTime()} - ERROR: API - Scheinbar ist die Verbindung zur API abgebrochen" if debug else "")
 	return
 
 
@@ -263,7 +270,7 @@ def evalArduinoMsg(arduinoMsg):
 			wert = dict_punkte.get(str(arduinoMsg[1:3]), arduinoMsg[1:3])#Wenn der Wer 25 -> Bull ansonsten schreib einfach den Wert
 			if wert != "bull":#Convertiere den Wert in nen Korrekten Integer wenns kein bullseye war
 				wert = str(int(wert)) #Einfach nur in int converten damits sinvoll gesliced ist. Wird aber als String weiterverwendet
-			print(f"INFO: Arduino - Empfangende Punktzahl: {modifier} {wert}")
+			print(f"{getCurrentTime()} - INFO: Arduino - Empfangende Punktzahl: {modifier} {wert}")
 
 			'''
 				Todo:
@@ -281,16 +288,16 @@ def evalArduinoMsg(arduinoMsg):
 			None
 
 		else:
-			print("WARNING: Arduino - Es wurde eine invalide Punktezahl vom Arduino empfangen: " + arduinoMsg)
+			print(f"{getCurrentTime()} - WARNING: Arduino - Es wurde eine invalide Punktezahl vom Arduino empfangen: " + arduinoMsg)
 	elif arduinoMsg == "m": #Es wurde ein Fehlwurf Festgestellt
-		print("INFO: Arduino - Es wurde ein Fehlwurf vom Arduino Festgestellt")
+		print(f"{getCurrentTime()} - INFO: Arduino - Es wurde ein Fehlwurf vom Arduino Festgestellt")
 		'''
 			Todo:
 				sende die Entsprechende information über den Fehlwurf an die API
 		'''
 		None
 	else:
-		print("WARNING: Arduino - Es wurde eine invalide Nachricht vom Arduino empfangen: " + arduinoMsg)
+		print(f"{getCurrentTime()} - WARNING: Arduino - Es wurde eine invalide Nachricht vom Arduino empfangen: " + arduinoMsg)
 	return
 
 
@@ -305,7 +312,7 @@ def arduinoSchnittstelle():
 				arduinoMsg = serial_conn.readline().decode().strip()#Einlesen, Bytecode umwandeln, + extrazeichen entfernen
 				evalArduinoMsg(arduinoMsg)
 	except serial.serialutil.SerialException:
-			print("ERROR: Die Verbindung zum Arduino wurde unterbrochen")
+			print(f"{getCurrentTime()} - ERROR: Die Verbindung zum Arduino wurde unterbrochen")
 	return
 
 #--------------------------------
@@ -319,24 +326,24 @@ Prüft ob alle nötigen Componenten vorhanden sind
 '''
 def checkConnections():
 	#Todo: Implement
-	print("INFO: Prüfe Arduino Serial Verbindung...")
+	print(f"{getCurrentTime()} - INFO: Prüfe Arduino Serial Verbindung...")
 	try:
 		serial_conn.open()#Baut eine Serielle Verbindung mit dem Arduino auf
 		time.sleep(1)#Warted 1ne Sekunde für den Verbindungsaufbau
-		print("INFO: Serielle Verbindung zum Arduino aufgebaut!")
+		print(f"{getCurrentTime()} - INFO: Serielle Verbindung zum Arduino aufgebaut!")
 	except serial.serialutil.SerialException:
-		print("ERROR: Es konnte keine Serielle Verbindung zum Arduino aufgebaut werden. Bitte Prüfen Sie, ob sie den Korrekten Port angegeben haben")
+		print(f"{getCurrentTime()} - ERROR: Es konnte keine Serielle Verbindung zum Arduino aufgebaut werden. Bitte Prüfen Sie, ob sie den Korrekten Port angegeben haben")
 		return False
 
-	print("INFO: Prüfe API Server Verbindung...")
+	print(f"{getCurrentTime()} - INFO: Prüfe API Server Verbindung...")
 	try:
 		req = requests.get(API_SERVER_DOMAIN, verify=False)
 		if req.status_code != 200:
-			print("ERROR: Es kann zwar eine Verbindung zur API Aufgebaut werden, aber scheinbar läuft diese nicht korrekt")
+			print(f"{getCurrentTime()} - ERROR: Es kann zwar eine Verbindung zur API Aufgebaut werden, aber scheinbar läuft diese nicht korrekt")
 			return False
-		print("INFO: Verbindung zur API erfolgreich geprüft!")
+		print(f"{getCurrentTime()} - INFO: Verbindung zur API erfolgreich geprüft!")
 	except requests.exceptions.ConnectionError:
-		print("ERROR: Es konnte keine Korrekte Verbindung zur API aufgebaut werden. Bitte Prüfen Sie, ob sie deren erreichbarkeit, und ob alle Services laufen")
+		print(f"{getCurrentTime()} - ERROR: Es konnte keine Korrekte Verbindung zur API aufgebaut werden. Bitte Prüfen Sie, ob sie deren erreichbarkeit, und ob alle Services laufen")
 		return False
 
 	'''
@@ -348,7 +355,7 @@ def checkConnections():
 
 
 def main():
-	print("INIT: Starte OnOffDart-Service")
+	print(f"{getCurrentTime()} - INIT: Starte OnOffDart-Service")
 
 	#Einstellungen für die Serielle Verbindung zum Arduino
 	serial_conn.baudrate = BAUD_RATE
@@ -356,14 +363,14 @@ def main():
 	serial.timeout = SERIAL_TIMEOUT
 
 	if checkConnections():
-		print("INIT: Alle Komponenten scheinen erreichbar zu sein. Setze Fort")
+		print(f"{getCurrentTime()} - INIT: Alle Komponenten scheinen erreichbar zu sein. Setze Fort")
 		arduinoKommunikationsThread = threading.Thread(target=arduinoSchnittstelle)
 		#arduinoKommunikationsThread.start() #Starte Arduino Thread
 		updateGameStateThread = threading.Thread(target=getGamestate)
 		updateGameStateThread.start() #Startet das Gamestate Update
 		
 	else:
-		print("ERROR: Es gab ein Problem bei einer der Komponenten, das Program kann so leider nicht fortfahren.")
+		print(f"{getCurrentTime()} - ERROR: Es gab ein Problem bei einer der Komponenten, das Program kann so leider nicht fortfahren.")
 
 	'''
 	Todo: 
