@@ -11,7 +11,8 @@ ARDUINO_PORT = "COM8" #Der Port an welchem Der Arduino via USB angeschlossen ist
 BAUD_RATE = 9600 #Die Baud Rate für die Arduino-USB-Serial Verbindnung
 SERIAL_TIMEOUT = 3#Der Maximal zulässige Tiemout für die Serielle Verbindung
 
-GAME_STATE_UPDATE_TIMER = 15#Nach wievielen Sekunden beim Backend für Veränderungen angefragt werden soll
+GAME_STATE_UPDATE_TIMER = 15#Nach wievielen Sekunden automatisch beim Backend für Veränderungen angefragt werden soll
+PLAYER_UPDATE_INTERVAL = 3#Nach wievielen Skeunden ein aktuelles Playerupdate angezeigt werden soll
 
 API_SERVER_DOMAIN = "https://api.dascr.local/api"#Die Domain des API-Servers
 
@@ -20,14 +21,18 @@ serial_conn = serial.Serial() #Das Objekt für die Serielle Verbindung (wird bei
 last_game_State = None #Speichert den lezten gefechten Spielzustand
 last_game_State_LOCK = Lock()#Nen Thread Lock um Race Conditions beim Zugriff auf last_game_State vorzubeugen
 
+
+fetchCountdown = GAME_STATE_UPDATE_TIMER#Ein interner Timer, welcher bei erreichen von 0 einen Automatischen API fetch ausführt. Bei Manuellen fetches wird dieser zurück gesezt
+fetchCountdown_LOCK = Lock()#Nen Thread Lock um Race Conditions beim Zugriff auf fetchCountdown vorzubeugen
+
 requests.packages.urllib3.disable_warnings(InsecureRequestWarning) #Schaltet TLS warnungen aus
 #-----------------------------
 
 '''
 Liest den Camera Feed der Onboard Camera ein
 '''
-#Todo: Implement
 def readCamera():
+	#Todo: Implement
 	return
 
 
@@ -37,8 +42,8 @@ def readCamera():
 Wertet den Camera Feed aus, aka Führt die Bildereknneugn für die Linie aus, und
 nuzt die API funktionen 
 '''
-#Todo: Implement
 def evaluateCameraFeed():
+	#Todo: Implement
 	return
 
 
@@ -56,8 +61,8 @@ def sendCameraFeed():
 '''
 Schaltet den angeschlossenden LED Strip
 '''
-#Todo: Implement
 def enableLEDs():
+	#Todo: Implement
 	return
 
 
@@ -67,7 +72,6 @@ def enableLEDs():
 
 #Repräsentiert den aktuellen Gamestate
 class Gamestate:
-	#Todo: Implement 
 	def __init__(self, p_uid, p_Game, p_playerIDs, p_player, p_Variant, p_In, p_Out, p_ActivePlayer, p_ThrowRound, p_Gamestate, p_Settings, p_UndoLog, p_Podium):
 		self.uid = p_uid 
 		self.Game = p_Game
@@ -139,18 +143,18 @@ def changePlayer(uid, debug):
 		last_game_State = gs#Gamestate manuell aktualisieren
 		last_game_State_LOCK.release()# Verlassen der Critical Section
 		if req.status_code == 200:
-			print(f"{getCurrentTime()} - INFO: Spielerwechsel erfolgreich" if debug else "")
+			if debug:
+				print(f"{getCurrentTime()} - INFO: Spielerwechsel erfolgreich")
 		else:
-			print(f"{getCurrentTime()} - WARNING: Spielerwechsel nicht erfolgreich" if debug else "")
+			if debug:
+				print(f"{getCurrentTime()} - WARNING: Spielerwechsel nicht erfolgreich")
 	except requests.exceptions.ConnectionError:
-		print(f"{getCurrentTime()} - ERROR: API - Scheinbar ist die Verbindung zur API abgebrochen" if debug else "")
+		print(f"{getCurrentTime()} - ERROR: API - Scheinbar ist die Verbindung zur API abgebrochen")
 	return
 
 '''
-Vergleicht den lezten Gespeicherten Spielstand, mit dem neu gefechten
-
-Bei Änderungen werden diese Automatisch umgesezt
-
+Vergleicht den lezten Gespeicherten Spielstand, mit dem neu gefetchten
+Bei Änderungen werden diese Automatisch angepasst.
 @param newGameState ein neuer Gamestate der zum Vergleich genuzt wird
 @param debug Ob Statusmeldungen ausgegeben werden sollen. Im normalbetrieb ja, aber bei intern angestossende fetches machen diese weniger sinn
 '''
@@ -164,7 +168,8 @@ def checkGamestateDiff(newGameState, debug):
 	alte_uid = int(gs.uid)
 
 	if neue_uid > alte_uid: # Ein neues Spiel wurde erstellt
-		print(f"{getCurrentTime()} - WARNING: API - Es wurde ein neues Spiel erstellt. Wechsel aufs neue Spiel. Alte UID: {alte_uid}. Neue UID: {neue_uid}" if debug else "")
+		if debug:
+			print(f"{getCurrentTime()} - WARNING: API - Es wurde ein neues Spiel erstellt. Wechsel aufs neue Spiel. Alte UID: {alte_uid}. Neue UID: {neue_uid}")
 		last_game_State_LOCK.acquire()# Eintritt in Critical Sektion, sperrung des last_game_States
 		last_game_State = newGameState
 		last_game_State_LOCK.release()# Verlassen der Critical Section
@@ -173,17 +178,20 @@ def checkGamestateDiff(newGameState, debug):
 		neu_aktuellerSpieler = getCurrentPlayer(newGameState)
 
 		if alt_aktuellerSpieler['UID'] != neu_aktuellerSpieler['UID']: #Prüfe ob sich die Uid des aktiven Spielrs geändert hat (kann nur extern geschehen sein)
-			print(f"{getCurrentTime()} - WARNING: API - Der aktive Spieler wurde extern geändert!. Alt: {alt_aktuellerSpieler['UID']}, neu: {neu_aktuellerSpieler['UID']}. Übernehme den neuen Game State" if debug else "")
+			if debug:
+				print(f"{getCurrentTime()} - WARNING: API - Der aktive Spieler wurde extern geändert!. Alt: {alt_aktuellerSpieler['UID']}, neu: {neu_aktuellerSpieler['UID']}. Übernehme den neuen Game State")
 			last_game_State_LOCK.acquire()# Eintritt in Critical Sektion, sperrung des last_game_States
 			last_game_State = newGameState
 			last_game_State_LOCK.release()# Verlassen der Critical Section
 		else: #Die Spieler wurden nicht Extern geändert 
 			if newGameState.GameState == "NEXTPLAYER": #Es muss zum nächsten Spieler gewechselt werden (da dies nicht automaitsch extern passiert)
-				print(f"{getCurrentTime()} - WARNING: Ein Spielerwechsel ist erforderlich. Sende Spielerwechsel Request an API" if debug else "")
+				if debug:
+					print(f"{getCurrentTime()} - WARNING: Ein Spielerwechsel ist erforderlich. Sende Spielerwechsel Request an API")
 				changePlayer(neue_uid, debug)
 			else:
 				if newGameState.GameState != gs.GameState: #Der Gamestate wurde extern geändert, aka ein Wurf wurde extern hinzugefügt
-					print(f"{getCurrentTime()} - WARNING: API - Der Gamestate wurde extern geändert! (alt: {gs.GameState}, neu: {newGameState.GameState}). Übernehme neuen Gamestate" if debug else "")
+					if debug:
+						print(f"{getCurrentTime()} - WARNING: API - Der Gamestate wurde extern geändert! (alt: {gs.GameState}, neu: {newGameState.GameState}). Übernehme neuen Gamestate")
 					last_game_State_LOCK.acquire()# Eintritt in Critical Sektion, sperrung des last_game_States
 					last_game_State = newGameState
 					last_game_State_LOCK.release()# Verlassen der Critical Section
@@ -191,7 +199,8 @@ def checkGamestateDiff(newGameState, debug):
 					alt_throws = getCurrentPlayerThrows(alt_aktuellerSpieler)
 					neu_throws = getCurrentPlayerThrows(neu_aktuellerSpieler)
 					if alt_throws != neu_throws:#Es wurden beim Spieler extern würfe verändert
-						print(f"{getCurrentTime()} - WARNING: API - Bei Spieler: {neu_aktuellerSpieler['UID']} wurden extern Würfe verändert! (alte Wurfzahl: {alt_throws}, neue Wurfzahl: {neu_throws}) Übernehme neuen Gamestate" if debug else "" )
+						if debug:
+							print(f"{getCurrentTime()} - WARNING: API - Bei Spieler: {neu_aktuellerSpieler['UID']} wurden extern Würfe verändert! (alte Wurfzahl: {alt_throws}, neue Wurfzahl: {neu_throws}) Übernehme neuen Gamestate" )
 						last_game_State_LOCK.acquire()# Eintritt in Critical Sektion, sperrung des last_game_States
 						last_game_State = newGameState
 						last_game_State_LOCK.release()# Verlassen der Critical Section
@@ -199,12 +208,15 @@ def checkGamestateDiff(newGameState, debug):
 						last_game_State_LOCK.acquire()# Eintritt in Critical Sektion, sperrung des last_game_States
 						last_game_State = newGameState
 						last_game_State_LOCK.release()# Verlassen der Critical Section
-						print(f"{getCurrentTime()} - INFO: API - Keine externen Spielupdates festgestellt. Alles OK")
+						if debug:
+							print(f"{getCurrentTime()} - INFO: API - Keine externen Spielupdates festgestellt. Alles OK")
 	else: #Die neue UID < alte UID
-		print(f'{getCurrentTime()} - ERROR: API - Das neue Spiel hat scheinabr eine niedrigere UID als das lezte. Evtl wurde das Spiel gelöscht. Wechsel auf das "neue" Spiel. Alte UID: {last_game_State.uid}. Neue UID: {newGameState.uid}')
+		if debug:
+			print(f'{getCurrentTime()} - ERROR: API - Das neue Spiel hat scheinbar eine niedrigere UID als das lezte. Evtl wurde das Spiel gelöscht. Wechsel auf das "neue" Spiel. Alte UID: {last_game_State.uid}. Neue UID: {newGameState.uid}')
 		last_game_State_LOCK.acquire()# Eintritt in Critical Sektion, sperrung des last_game_States
 		last_game_State = newGameState
 		last_game_State_LOCK.release()# Verlassen der Critical Section
+
 	return
 
 
@@ -215,24 +227,23 @@ Nötig, da der Pi ja nicht bei Änderungen durch das Frontend im Backend informi
 Daher ist eine Regelmässige Abfrage nötig um den aktuellen Spielstand zu ermitteln.
 Es wird vorausgesezt das die höchste numerische uid, die des aktuellsten Spiels ist
 
-@param debug Ob Statusmeldungen ausgegeben werden sollen. Im normalbetrieb ja, aber bei intern angestossende fetches machen diese weniger sinn
+@param debug Ob Statusmeldungen ausgegeben werden sollen. Bei automatischen Requests ja, aber bei intern angestossende fetches eher nicht
 '''
 def fetchCurrentGamestate(debug):
 	try:
 		spiele_request = requests.get(API_SERVER_DOMAIN + "/game", verify=False)#Lese lisste aller Spiele aus
 		spiele = (spiele_request.text).strip()
 		'''
-		Todo:
+		Done:
 			- Extrahiere aktuellstes Spiel (höchste UID im json)
 			- Lese die entsprechenden Daten aus speicehr in nem GameState Objekt, und vergleiche mit leztem Gamestate
 			- Bei Gamestate änderungen oder gar nem Neuen Spiel, aktualisiere (falls nötig)
 		'''
 		if spiele == "null":
-			print(f"{getCurrentTime()} - WARNING: API - Es wurde noch kein Spiel erstellt - Gameupdate nicht möglich" if debug else "")
+			if debug:
+				print(f"{getCurrentTime()} - WARNING: API - Es wurde noch kein Spiel erstellt - Gameupdate nicht möglich")
 		else: #Es wurden Spiele Gefunden
 			json_data = json.loads(spiele_request.text)
-			#print(json.dumps( json_data[len(json_data)-1] ,indent=4))
-			#identifiziere das neuste Spiel, aka das mit höchster uid
 			max_uid = 0
 			max_index = 0
 			
@@ -242,7 +253,7 @@ def fetchCurrentGamestate(debug):
 						max_uid = int(json_data[i].get('uid'))
 						max_index = i
 				except ValueError:
-					print(f"{getCurrentTime()} - WARNING: API - EINE Nicht numerische UID wurde gefunden: {json_data[i].get('uid')} . Skippe diese (bitte entfernen dieser falls möglich)"  if debug else "")
+					print(f"{getCurrentTime()} - WARNING: API - EINE Nicht numerische UID wurde gefunden: {json_data[i].get('uid')} . Skippe diese (bitte entfernen dieser falls möglich)")
 
 			last_game = json_data[max_index]#Der lezte Datensatz. ACHTUNG muss noch geändert werden, da dieser lieder nicht automatisch das neuste Spiel ist
 			uid = last_game.get('uid')
@@ -259,9 +270,6 @@ def fetchCurrentGamestate(debug):
 			undoLog = last_game.get('GameObject').get('Base').get('UndoLog')
 			podium = last_game.get('GameObject').get('Base').get('Podium')
 			game = Gamestate(uid,game,playerIDs,players,variant,In,Out,activePlayer,throwRound,gameState,settings,undoLog,podium)
-			#for attr, value in vars(game).items():#Zum prüfen des Objekte
-				#print(f"{attr}: {value}")
-			#last_game_State_LOCK.acquire()# Eintritt in Critical Sektion, sperrung des last_game_States
 			global last_game_State
 			last_game_State_LOCK.acquire()# Eintritt in Critical Sektion, sperrung des last_game_States
 			gs = last_game_State
@@ -274,20 +282,60 @@ def fetchCurrentGamestate(debug):
 				last_game_State_LOCK.release()# Verlassen der Critical Section
 
 	except requests.exceptions.ConnectionError:
-		print("{getCurrentTime()} - ERROR: API - Scheinbar ist die Verbindung zur API abgebrochen" if debug else "")
+		print(f"{getCurrentTime()} - ERROR: API - Scheinbar ist die Verbindung zur API abgebrochen")
+
+
+	fetchCountdown_LOCK.acquire()
+	global fetchCountdown
+	fetchCountdown = GAME_STATE_UPDATE_TIMER#Fetch successfull, setzte Timer zurück
+	fetchCountdown_LOCK.release()
 	return
 
 
 
 '''
-Führt regelmässige Spielstand abfragen zur API durch
+Führt regelmässige Spielstand abfragen zur API durch.
 '''
 def getGamestate():
 	while 1:
-		fetchCurrentGamestate(True)
-		time.sleep(GAME_STATE_UPDATE_TIMER)#Wartet X Sekunden bis zur nächsten Gamestate Prüfung
+		global fetchCountdown
+		fetchCountdown_LOCK.acquire()
+		fetchTimer = fetchCountdown
+		fetchCountdown_LOCK.release()
+		if fetchTimer <= 0:
+			fetchCurrentGamestate(True) #Timer wird in der Methode automatisch zurückgesezt, muss nicht hier geschehen
+		else:
+			fetchCountdown_LOCK.acquire()
+			fetchCountdown = fetchCountdown - 1
+			fetchCountdown_LOCK.release()
+		time.sleep(1)#Wartet 1 Sekunde bis zur nächsten Gamestate Prüfung
+		
+		
 	return
 
+
+
+'''
+Gibt in Regelmässigen Intervalen den aktuellen Spieler mit einigen Informationen aus
+'''
+def showRoundStatus():
+	while 1:
+		global last_game_State
+		last_game_State_LOCK.acquire()
+		gs = last_game_State
+		last_game_State_LOCK.release()
+		if gs is not None:
+			aktuellerSpieler = getCurrentPlayer(gs)
+			spielerName = aktuellerSpieler['Name']
+			spielerRunden = aktuellerSpieler['ThrowRounds']#Die Runden des Spielers
+			spielerRundenZahl = len(spielerRunden)-1#Die Anzahl an Runden des Spielers
+			aktuelleSpielerRunde = spielerRunden[spielerRundenZahl]#Die aktuelle Runde des Spielers
+			aktuelleSpielerRundeWuerfe = aktuelleSpielerRunde['Throws']#Die Würfe des Spielrs in der aktuellen Runde
+			aktuelleRundeAktuellerWurfzahl = len(aktuelleSpielerRundeWuerfe)#Die Anzahl an Würfen des Spielers in der aktuellen Runde
+			aktuelleRundeAktuellerWurf = aktuelleSpielerRundeWuerfe[aktuelleRundeAktuellerWurfzahl-1]#Der Aktuellste Wurf des Spielers
+			print(f"{getCurrentTime()} - INFO - Aktueller Spieler: {spielerName}, in Runde: {spielerRundenZahl}. Mit {aktuelleRundeAktuellerWurfzahl} Würfen. Average: {getCurrentPlayerThrowAverage(aktuellerSpieler)}")
+		time.sleep(PLAYER_UPDATE_INTERVAL)#Wartet 3 Sekunden bis zum nächsten Update
+	return
 
 #--------------------------------
 
@@ -326,37 +374,30 @@ aka Aktualisiert den Gamestate lokal, und sendet auch falls nötig die Daten an 
 @param arduinoMsg die auszuwertende Nachricht
 '''
 def evalArduinoMsg(arduinoMsg):
+
 	if arduinoMsg.isnumeric(): #Es wird ein Zahlenwert empfangen
 		if(len(arduinoMsg) == 3 and int(arduinoMsg[0]) < 4 and int(arduinoMsg[0]) >= 0):#Gültige Punktezahl empfangen
 			modifier = dict_punkte.get(arduinoMsg[0])#Der Empfangende Modifier (1=single, 2=double, 3=triple)
 			wert = dict_punkte.get(str(arduinoMsg[1:3]), arduinoMsg[1:3])#Wenn der Wer 25 -> Bull ansonsten schreib einfach den Wert
 			if wert != "bull":#Convertiere den Wert in nen Korrekten Integer wenns kein bullseye war
-				wert = str(int(wert)) #Einfach nur in int converten damits sinvoll gesliced ist. Wird aber als String weiterverwendet
+				wert = str(int(wert)) #Einfach nur in int converten damits sinvoll gesliced ist. Wird aber als String weiterverwendet	
 			print(f"{getCurrentTime()} - INFO: Arduino - Empfangende Punktzahl: {modifier} {wert}")
-
-			'''
-				Todo:
-					Benutze den Empfangenden wert um: 
-						a) den Gamestate zu aktualisieren
-						b) Die Daten an die API zu senden
-			'''
-			
-
-			#a) Aktualisierung des Gamestates
-				#Todo Implement
-
-			#b) Sende Daten an API
-				#Todo Implement
 
 			last_game_State_LOCK.acquire()
 			gs = last_game_State
 			last_game_State_LOCK.release()
-			if(gs is None): #Ganz am anfang noch kein Gamestate von API abgefragt
+			if gs is None: #Ganz am anfang noch kein Gamestate von API abgefragt
 				fetchCurrentGamestate(False)
+				last_game_State_LOCK.acquire()
+				gs = last_game_State
+				last_game_State_LOCK.release()
 			curUID = str(gs.uid)
 			
 			statusCode = sendThrow(curUID, str(arduinoMsg[0]), wert)
-			
+
+		
+
+
 			if statusCode == 200:
 				print(f"{getCurrentTime()} - INFO: API - Score Erfolgreich übertragen: {modifier} {wert}")
 			elif statusCode == 400:
@@ -372,7 +413,7 @@ def evalArduinoMsg(arduinoMsg):
 	elif arduinoMsg == "m": #Es wurde ein Fehlwurf Festgestellt
 		print(f"{getCurrentTime()} - INFO: Arduino - Es wurde ein Fehlwurf vom Arduino Festgestellt. Übermittle diesen an die API")
 		'''
-			Todo:
+			Done:
 				sende die Entsprechende information über den Fehlwurf an die API.
 				Aktuell wird ein Fehlwurf, wie ein wurf mit 0 Punkten behandelt.
 				Wenn API ein 400 zurück gibt (Throw was not added) -> Spielerwechsel erforderlich
@@ -447,7 +488,8 @@ def checkConnections():
 
 	'''
 	Todo:
-		implementiere fehlende prüfunktionen Funktionen
+		implementiere fehlende Prüfunktionen.
+		Erst Relevant wenn Kamera und LED hinzu kommen
 	'''
 
 	return True
@@ -467,6 +509,8 @@ def main():
 		arduinoKommunikationsThread.start() #Starte Arduino Thread
 		updateGameStateThread = threading.Thread(target=getGamestate)
 		updateGameStateThread.start() #Startet das Gamestate Update
+		showRoundDataThread = threading.Thread(target=showRoundStatus)
+		showRoundDataThread.start() #Startet das Gamestate Update
 		
 	else:
 		print(f"{getCurrentTime()} - ERROR: Es gab ein Problem bei einer der Komponenten, das Program kann so leider nicht fortfahren.")
@@ -477,7 +521,8 @@ def main():
 		(wird teilweise in den functionen gemacht, sollte aber bei denen ausgelagert, und besser zentral geregelt werden 
 		-> starte dann auch die abgestürzten Threads neu, um nen Regelmässigen check zu haben)
 		Idealerweise gibts nen Daemon, welcher alle X Sekunden alle Verbindungen prüft, und das Program bei Problemen Pausiert
-		den Nutzer informiert, und bei wieder stehender Verbindung fortsezt
+		den Nutzer informiert, und bei wieder stehender Verbindung fortsezt.
+		Isn nice to have, aber grad für die absolute Elementarfunktion, nicht nötig
 	'''
 	return
 

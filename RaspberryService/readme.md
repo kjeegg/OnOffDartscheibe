@@ -29,11 +29,20 @@ Daher werden folgende API funktionalitäten vom Program benötigt:
   - POST /game/{id}/undo := Um die lezte aktion Rückgängig zu machen, falls z.B. ein Fehlwurf festgestellt wurde [WIRD SO NICHT GENUZT AKTUELL]
 
 Aktuelle Todos:
-- [ ] Arduino-Pi Schnittstelle
+- [x] Arduino-Pi Schnittstelle
   - [x] Auswertung der Arduino Nachrichten
-  - [ ] Bestimmung des jewiligen Gamestates und berechnung des nächsten basierend auf empfangenden Daten
-  - [ ] Gamestate updates an die API senden
+  - [x] Bestimmung des jeweiligen Gamestates und berechnung des nächsten basierend auf empfangenden Daten
+  - [x] Gamestate updates an die API senden
   - [x] Gamestate Updates von der API abfragen
+- [ ] Nen Permanenten Connection Check Mechanismus integrieren, welcher auch Neustarten + Pausieren kann wenn verbindungen unterbrochen wurden
 - [ ] LED Steuerung
 - [ ] Camera Linien erkennung und verarbeitung
 - [ ] Camera Feed wird an Server weitergesendet
+
+
+
+"Optionale" Todos:
+- [ ] Nen Anständigen Loggings Mechanismus einbauen
+- [ ] Das ganzen Code Refactoren und Objektorientiert neu schreiben
+- [ ] Nen besseres Exception Handling
+  - [ ] Vielleicht sogar via Heartbeed Mechanismus (würde aber anpassungen in API und Arduino Code erfordern)
