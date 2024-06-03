@@ -34,7 +34,8 @@ Aktuelle Todos:
   - [x] Bestimmung des jeweiligen Gamestates und berechnung des nächsten basierend auf empfangenden Daten
   - [x] Gamestate updates an die API senden
   - [x] Gamestate Updates von der API abfragen
-- [ ] Nen Permanenten Connection Check Mechanismus integrieren, welcher auch Neustarten + Pausieren kann wenn verbindungen unterbrochen wurden
+- [ ] Einen Permanenten Connection Check Mechanismus/Daemon integrieren, welcher auch Neustarten + Pausieren kann wenn Verbindungen unterbrochen wurden
+  - [ ] Vielleicht sogar via Heartbeed Mechanismus (würde aber anpassungen in API und Arduino Code erfordern)
 - [ ] LED Steuerung
 - [ ] Camera Linien erkennung und verarbeitung
 - [ ] Camera Feed wird an Server weitergesendet
@@ -42,7 +43,7 @@ Aktuelle Todos:
 
 
 "Optionale" Todos:
-- [ ] Nen Anständigen Loggings Mechanismus einbauen
-- [ ] Das ganzen Code Refactoren und Objektorientiert neu schreiben
-- [ ] Nen besseres Exception Handling
-  - [ ] Vielleicht sogar via Heartbeed Mechanismus (würde aber anpassungen in API und Arduino Code erfordern)
+- [ ] Einen Anständigen Loggings Mechanismus einbauen
+- [ ] Den ganzen Code Refactoren und Objektorientiert neu schreiben
+- [ ] Ein besseres Exception Handling implementieren
+  
