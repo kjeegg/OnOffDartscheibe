@@ -124,55 +124,71 @@
             }
 
             function updateGameDisplay(game) {
-                // Update player names
-                document.getElementById('player1Name').textContent = game.player[0].name;
-                document.getElementById('player2Name').textContent = game.player[1].name;
+                const base = game.Base;
 
-                // Update scores
-                document.getElementById('score1').textContent = game.player[0].score;
-                document.getElementById('score2').textContent = game.player[1].score;
+                if (!base || !base.Player || base.Player.length === 0) {
+                    console.error('Invalid game data');
+                    return;
+                }
 
-                // Update throw histories
-                const player1Throws = document.querySelectorAll('#player1 .throw-history .throw');
-                const player2Throws = document.querySelectorAll('#player2 .throw-history .throw');
+                const player1 = base.Player[0];
+                const player1Name = document.getElementById('player1Name');
+                const player1Score = document.getElementById('score1');
+                const player1Throws = document.getElementById('player1Throws');
 
-                game.player[0].throws.forEach((t, index) => {
-                    if (player1Throws[index]) {
-                        player1Throws[index].textContent = t;
-                    }
+                player1Name.textContent = player1.Name;
+                player1Score.textContent = player1.Score.Score;
+                player1Throws.innerHTML = '';
+                player1.LastThrows.forEach(throwData => {
+                    const throwElement = document.createElement('div');
+                    throwElement.className = 'throw';
+                    throwElement.textContent = `${throwData.Number} x ${throwData.Modifier}`;
+                    player1Throws.appendChild(throwElement);
                 });
 
-                game.player[1].throws.forEach((t, index) => {
-                    if (player2Throws[index]) {
-                        player2Throws[index].textContent = t;
-                    }
-                });
+                if (base.Player.length > 1) {
+                    const player2 = base.Player[1];
+                    const player2Name = document.getElementById('player2Name');
+                    const player2Score = document.getElementById('score2');
+                    const player2Throws = document.getElementById('player2Throws');
 
-                // Update history table
+                    player2Name.textContent = player2.Name;
+                    player2Score.textContent = player2.Score.Score;
+                    player2Throws.innerHTML = '';
+                    player2.LastThrows.forEach(throwData => {
+                        const throwElement = document.createElement('div');
+                        throwElement.className = 'throw';
+                        throwElement.textContent = `${throwData.Number} x ${throwData.Modifier}`;
+                        player2Throws.appendChild(throwElement);
+                    });
+                }
+
                 const historyTableBody = document.getElementById('historyTableBody');
                 historyTableBody.innerHTML = '';
+                base.Player.forEach(player => {
+                    player.ThrowRounds.forEach(round => {
+                        if (round.Throws.length > 0) {
+                            const row = document.createElement('tr');
+                            const playerNameCell = document.createElement('td');
+                            const roundCell = document.createElement('td');
+                            const pointsCell = document.createElement('td');
 
-                game.history.forEach(entry => {
-                    const row = document.createElement('tr');
-                    const playerNameCell = document.createElement('td');
-                    const roundCell = document.createElement('td');
-                    const pointsCell = document.createElement('td');
+                            playerNameCell.textContent = player.Name;
+                            roundCell.textContent = round.Round;
+                            pointsCell.textContent = round.Throws.map(t => `${t.Number} x ${t.Modifier}`).join(', ');
 
-                    playerNameCell.textContent = entry.player;
-                    roundCell.textContent = entry.round;
-                    pointsCell.textContent = entry.points;
-
-                    row.appendChild(playerNameCell);
-                    row.appendChild(roundCell);
-                    row.appendChild(pointsCell);
-                    historyTableBody.appendChild(row);
+                            row.appendChild(playerNameCell);
+                            row.appendChild(roundCell);
+                            row.appendChild(pointsCell);
+                            historyTableBody.appendChild(row);
+                        }
+                    });
                 });
 
                 previousGameData = game;
             }
 
             async function skipTurn() {
-                // Add your skip turn logic here
                 console.log('Turn skipped');
                 alert('Turn skipped');
             }
