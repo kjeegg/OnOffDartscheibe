@@ -10,7 +10,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@100..900&display=swap" rel="stylesheet">
-    
+
     <title>Spiel - Dartscheibe</title>
 </head>
     <body>
@@ -105,7 +105,7 @@
                 const gameId = urlParams.get('gameId');
 
                 try {
-                    const response = await fetch(`http://127.0.0.1:8000/api/game/${gameId}/display`, {
+                    const response = await fetch(`https://api.dascr.local/api/game/${gameId}/display`, {
                         method: 'GET',
                         headers: {
                             'Content-Type': 'application/json'
@@ -120,7 +120,6 @@
                     updateGameDisplay(game);
                 } catch (error) {
                     console.error('Fehler beim Laden des Spiels:', error);
-                    // alert('Fehler beim Laden des Spiels: ' + error.message);
                 }
             }
 
@@ -130,35 +129,86 @@
                 document.getElementById('player2Name').textContent = game.player[1].name;
 
                 // Update scores
-                document.getElementById('score1').textContent = game.player[0].score.Score;
-                document.getElementById('score2').textContent = game.player[1].score.Score;
+                document.getElementById('score1').textContent = game.player[0].score;
+                document.getElementById('score2').textContent = game.player[1].score;
 
-                // Check if history has changed
-                if (JSON.stringify(previousGameData) !== JSON.stringify(game)) {
-                    const historyTableBody = document.getElementById('historyTableBody');
-                    historyTableBody.innerHTML = '';
+                // Update throw histories
+                const player1Throws = document.querySelectorAll('#player1 .throw-history .throw');
+                const player2Throws = document.querySelectorAll('#player2 .throw-history .throw');
 
-                    game.player.forEach((player, playerIndex) => {
-                        player.history.forEach(entry => {
-                            const row = document.createElement('tr');
-                            const playerNameCell = document.createElement('td');
-                            const roundCell = document.createElement('td');
-                            const pointsCell = document.createElement('td');
+                game.player[0].throws.forEach((t, index) => {
+                    if (player1Throws[index]) {
+                        player1Throws[index].textContent = t;
+                    }
+                });
 
-                            playerNameCell.textContent = player.name;
-                            roundCell.textContent = entry.round;
-                            pointsCell.textContent = entry.points;
+                game.player[1].throws.forEach((t, index) => {
+                    if (player2Throws[index]) {
+                        player2Throws[index].textContent = t;
+                    }
+                });
 
-                            row.appendChild(playerNameCell);
-                            row.appendChild(roundCell);
-                            row.appendChild(pointsCell);
-                            historyTableBody.appendChild(row);
-                        });
-                    });
+                // Update history table
+                const historyTableBody = document.getElementById('historyTableBody');
+                historyTableBody.innerHTML = '';
 
-                    previousGameData = game;
+                game.history.forEach(entry => {
+                    const row = document.createElement('tr');
+                    const playerNameCell = document.createElement('td');
+                    const roundCell = document.createElement('td');
+                    const pointsCell = document.createElement('td');
+
+                    playerNameCell.textContent = entry.player;
+                    roundCell.textContent = entry.round;
+                    pointsCell.textContent = entry.points;
+
+                    row.appendChild(playerNameCell);
+                    row.appendChild(roundCell);
+                    row.appendChild(pointsCell);
+                    historyTableBody.appendChild(row);
+                });
+
+                previousGameData = game;
+            }
+
+            async function skipTurn() {
+                // Add your skip turn logic here
+                console.log('Turn skipped');
+                alert('Turn skipped');
+            }
+
+            async function manualEntry() {
+                const points = prompt('Bitte geben Sie die Punkte ein:');
+                if (points !== null) {
+                    console.log('Manual entry:', points);
+                    alert('Punkte manuell eingetragen: ' + points);
                 }
             }
+
+            async function endGame() {
+                const urlParams = new URLSearchParams(window.location.search);
+                const gameId = urlParams.get('gameId');
+
+                try {
+                    const response = await fetch(`https://api.dascr.local/api/game/${gameId}`, {
+                        method: 'DELETE',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        }
+                    });
+
+                    if (!response.ok) {
+                        throw new Error('Network response was not ok');
+                    }
+
+                    alert('Spiel erfolgreich beendet');
+                    window.location.href = 'index.html';
+                } catch (error) {
+                    console.error('Fehler beim Beenden des Spiels:', error);
+                    alert('Fehler beim Beenden des Spiels: ' + error.message);
+                }
+            }
+
             window.onload = function() {
                 loadGame();
                 setInterval(loadGame, 5000); // Update every 5 seconds
