@@ -127,7 +127,7 @@
                 const base = game.Base;
 
                 if (!base || !base.Player || base.Player.length === 0) {
-                    console.error('Invalid game data');
+                    console.error('Invalid game data:', game);
                     return;
                 }
 
@@ -139,12 +139,14 @@
                 player1Name.textContent = player1.Name;
                 player1Score.textContent = player1.Score.Score;
                 player1Throws.innerHTML = '';
-                player1.LastThrows.forEach(throwData => {
-                    const throwElement = document.createElement('div');
-                    throwElement.className = 'throw';
-                    throwElement.textContent = `${throwData.Number} x ${throwData.Modifier}`;
-                    player1Throws.appendChild(throwElement);
-                });
+                if (player1.LastThrows) {
+                    player1.LastThrows.forEach(throwData => {
+                        const throwElement = document.createElement('div');
+                        throwElement.className = 'throw';
+                        throwElement.textContent = `${throwData.Number} x ${throwData.Modifier}`;
+                        player1Throws.appendChild(throwElement);
+                    });
+                }
 
                 if (base.Player.length > 1) {
                     const player2 = base.Player[1];
@@ -155,34 +157,38 @@
                     player2Name.textContent = player2.Name;
                     player2Score.textContent = player2.Score.Score;
                     player2Throws.innerHTML = '';
-                    player2.LastThrows.forEach(throwData => {
-                        const throwElement = document.createElement('div');
-                        throwElement.className = 'throw';
-                        throwElement.textContent = `${throwData.Number} x ${throwData.Modifier}`;
-                        player2Throws.appendChild(throwElement);
-                    });
+                    if (player2.LastThrows) {
+                        player2.LastThrows.forEach(throwData => {
+                            const throwElement = document.createElement('div');
+                            throwElement.className = 'throw';
+                            throwElement.textContent = `${throwData.Number} x ${throwData.Modifier}`;
+                            player2Throws.appendChild(throwElement);
+                        });
+                    }
                 }
 
                 const historyTableBody = document.getElementById('historyTableBody');
                 historyTableBody.innerHTML = '';
                 base.Player.forEach(player => {
-                    player.ThrowRounds.forEach(round => {
-                        if (round.Throws.length > 0) {
-                            const row = document.createElement('tr');
-                            const playerNameCell = document.createElement('td');
-                            const roundCell = document.createElement('td');
-                            const pointsCell = document.createElement('td');
+                    if (player.ThrowRounds) {
+                        player.ThrowRounds.forEach(round => {
+                            if (round.Throws && round.Throws.length > 0) {
+                                const row = document.createElement('tr');
+                                const playerNameCell = document.createElement('td');
+                                const roundCell = document.createElement('td');
+                                const pointsCell = document.createElement('td');
 
-                            playerNameCell.textContent = player.Name;
-                            roundCell.textContent = round.Round;
-                            pointsCell.textContent = round.Throws.map(t => `${t.Number} x ${t.Modifier}`).join(', ');
+                                playerNameCell.textContent = player.Name;
+                                roundCell.textContent = round.Round;
+                                pointsCell.textContent = round.Throws.map(t => `${t.Number} x ${t.Modifier}`).join(', ');
 
-                            row.appendChild(playerNameCell);
-                            row.appendChild(roundCell);
-                            row.appendChild(pointsCell);
-                            historyTableBody.appendChild(row);
-                        }
-                    });
+                                row.appendChild(playerNameCell);
+                                row.appendChild(roundCell);
+                                row.appendChild(pointsCell);
+                                historyTableBody.appendChild(row);
+                            }
+                        });
+                    }
                 });
 
                 previousGameData = game;
