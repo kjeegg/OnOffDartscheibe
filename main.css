@@ -101,6 +101,9 @@ footer {
     align-items: center;
     gap: 20px
 }
+.nav-active {
+    color: var(--fh-mint);
+}
 .nav-button {
     background-color: white;
     border: none;
@@ -139,15 +142,18 @@ footer {
     background-color: var(--font-color);
     color: var(--bg-color);
     border: none;
-    border-radius: var(--corner-medium);
+    border-radius: var(--corner-large);
     text-decoration: none;
     font-size: var(--medium);
-    font-weight: 700;
+    font-weight: 600;
     padding: 10px;
+    padding-left: 20px;
+    padding-right: 20px;
     transition: 0.2s;
 }
 .button-big:hover {
     background-color: var(--fh-mint);
+    color: white;
     transform: scale(1.1);
     transition: 0.2s;
 }
