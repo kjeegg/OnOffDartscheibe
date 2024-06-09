@@ -1,6 +1,7 @@
 :root {
     --bg-color: white;
     --font-color: black;
+    --arrow-icon: url(../images/arrow_black.svg);
     
     /* fonts */
     --base: 18px;
@@ -24,6 +25,7 @@
 [data-theme="dark"] {
     --bg-color: black;
     --font-color: white;
+    --arrow-icon: url(../images/arrow_white.svg);
 }
 body {
     font-family: Outfit, sans-serif;
