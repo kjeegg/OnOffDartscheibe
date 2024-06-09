@@ -56,7 +56,7 @@ document.addEventListener('DOMContentLoaded', function() {
             player1ThrowsContainer.removeChild(player1ThrowsContainer.firstChild);
         }
 
-        // Create new throw elements from LastThrows
+        // Create new throw elements from LastThrowsds
         if (player1.LastThrows && player1.LastThrows.length > 0) {
             player1.LastThrows.slice(0, 3).forEach((throwData, index) => {
                 if (handleInvalidThrow(throwData)) {
