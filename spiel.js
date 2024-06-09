@@ -46,19 +46,21 @@ document.addEventListener('DOMContentLoaded', function() {
             player1ThrowsContainer.removeChild(player1ThrowsContainer.firstChild);
         }
 
-        // Create new throw elements
-        if (player1.ThrowRounds && player1.ThrowRounds.length > 0) {
-            player1.ThrowRounds[0].Throws.forEach(throwData => {
+        // Create new throw elements from LastThrows
+        if (player1.LastThrows && player1.LastThrows.length > 0) {
+            player1.LastThrows.slice(0, 3).forEach((throwData, index) => {
                 const throwElement = document.createElement('div');
-                throwElement.className = 'throw';
-                throwElement.textContent = `${throwData.Number} x ${throwData.Modifier}`;
+                throwElement.className = `throw ${index + 1}-throw`;
+                throwElement.textContent = `${throwData.Number * throwData.Modifier}`;
                 player1ThrowsContainer.appendChild(throwElement);
             });
         } else {
-            const noThrowsElement = document.createElement('div');
-            noThrowsElement.className = 'throw';
-            noThrowsElement.textContent = 'No throws available';
-            player1ThrowsContainer.appendChild(noThrowsElement);
+            for (let i = 0; i < 3; i++) {
+                const throwElement = document.createElement('div');
+                throwElement.className = `throw ${i + 1}-throw`;
+                throwElement.textContent = 'No throws available';
+                player1ThrowsContainer.appendChild(throwElement);
+            }
         }
 
         // Updating Player 2 if exists
@@ -76,19 +78,21 @@ document.addEventListener('DOMContentLoaded', function() {
                 player2ThrowsContainer.removeChild(player2ThrowsContainer.firstChild);
             }
 
-            // Create new throw elements
-            if (player2.ThrowRounds && player2.ThrowRounds.length > 0) {
-                player2.ThrowRounds[0].Throws.forEach(throwData => {
+            // Create new throw elements from LastThrows
+            if (player2.LastThrows && player2.LastThrows.length > 0) {
+                player2.LastThrows.slice(0, 3).forEach((throwData, index) => {
                     const throwElement = document.createElement('div');
-                    throwElement.className = 'throw';
-                    throwElement.textContent = `${throwData.Number} x ${throwData.Modifier}`;
+                    throwElement.className = `throw ${index + 1}-throw`;
+                    throwElement.textContent = `${throwData.Number * throwData.Modifier}`;
                     player2ThrowsContainer.appendChild(throwElement);
                 });
             } else {
-                const noThrowsElement = document.createElement('div');
-                noThrowsElement.className = 'throw';
-                noThrowsElement.textContent = 'No throws available';
-                player2ThrowsContainer.appendChild(noThrowsElement);
+                for (let i = 0; i < 3; i++) {
+                    const throwElement = document.createElement('div');
+                    throwElement.className = `throw ${i + 1}-throw`;
+                    throwElement.textContent = 'No throws available';
+                    player2ThrowsContainer.appendChild(throwElement);
+                }
             }
         }
 
@@ -106,7 +110,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
                             playerNameCell.textContent = player.Name;
                             roundCell.textContent = round.Round;
-                            pointsCell.textContent = round.Throws.map(t => `${t.Number} x ${t.Modifier}`).join(', ');
+                            pointsCell.textContent = round.Throws.map(t => `${t.Number * t.Modifier}`).join(', ');
 
                             row.appendChild(playerNameCell);
                             row.appendChild(roundCell);
