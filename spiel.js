@@ -19,7 +19,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
             const game = await response.json();
             updateGameDisplay(game);
-            //updatePlayerTurn(game);
+            updatePlayerTurn(game);
         } catch (error) {
             console.error('Fehler beim Laden des Spiels:', error);
         }
@@ -36,18 +36,29 @@ document.addEventListener('DOMContentLoaded', function() {
         const player1 = base.Player[0];
         const player1Name = document.getElementById('player1Name');
         const player1Score = document.getElementById('score1');
-        const player1Throws = document.querySelectorAll('#player1Throws .throw');
+        const player1ThrowsContainer = document.getElementById('player1Throws');
 
         player1Name.textContent = player1.Name;
         player1Score.textContent = player1.Score?.Score || 0;
 
-        if (player1Throws.length > 0 && player1.ThrowRounds && player1.ThrowRounds.length > 0) {
-            const throws = player1.ThrowRounds[0].Throws;
-            for (let i = 0; i < throws.length; i++) {
-                if (player1Throws[i]) {
-                    player1Throws[i].textContent = `${throws[i].Number} x ${throws[i].Modifier}`;
-                }
-            }
+        // Remove existing throw elements
+        while (player1ThrowsContainer.firstChild) {
+            player1ThrowsContainer.removeChild(player1ThrowsContainer.firstChild);
+        }
+
+        // Create new throw elements
+        if (player1.ThrowRounds && player1.ThrowRounds.length > 0) {
+            player1.ThrowRounds[0].Throws.forEach(throwData => {
+                const throwElement = document.createElement('div');
+                throwElement.className = 'throw';
+                throwElement.textContent = `${throwData.Number} x ${throwData.Modifier}`;
+                player1ThrowsContainer.appendChild(throwElement);
+            });
+        } else {
+            const noThrowsElement = document.createElement('div');
+            noThrowsElement.className = 'throw';
+            noThrowsElement.textContent = 'No throws available';
+            player1ThrowsContainer.appendChild(noThrowsElement);
         }
 
         // Updating Player 2 if exists
@@ -55,18 +66,29 @@ document.addEventListener('DOMContentLoaded', function() {
             const player2 = base.Player[1];
             const player2Name = document.getElementById('player2Name');
             const player2Score = document.getElementById('score2');
-            const player2Throws = document.querySelectorAll('#player2Throws .throw');
+            const player2ThrowsContainer = document.getElementById('player2Throws');
 
             player2Name.textContent = player2.Name;
             player2Score.textContent = player2.Score?.Score || 0;
 
-            if (player2Throws.length > 0 && player2.ThrowRounds && player2.ThrowRounds.length > 0) {
-                const throws = player2.ThrowRounds[0].Throws;
-                for (let i = 0; i < throws.length; i++) {
-                    if (player2Throws[i]) {
-                        player2Throws[i].textContent = `${throws[i].Number} x ${throws[i].Modifier}`;
-                    }
-                }
+            // Remove existing throw elements
+            while (player2ThrowsContainer.firstChild) {
+                player2ThrowsContainer.removeChild(player2ThrowsContainer.firstChild);
+            }
+
+            // Create new throw elements
+            if (player2.ThrowRounds && player2.ThrowRounds.length > 0) {
+                player2.ThrowRounds[0].Throws.forEach(throwData => {
+                    const throwElement = document.createElement('div');
+                    throwElement.className = 'throw';
+                    throwElement.textContent = `${throwData.Number} x ${throwData.Modifier}`;
+                    player2ThrowsContainer.appendChild(throwElement);
+                });
+            } else {
+                const noThrowsElement = document.createElement('div');
+                noThrowsElement.className = 'throw';
+                noThrowsElement.textContent = 'No throws available';
+                player2ThrowsContainer.appendChild(noThrowsElement);
             }
         }
 
