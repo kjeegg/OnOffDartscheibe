@@ -9,7 +9,7 @@ async function loadTopPlayers() {
         });
         // sort players by score
         const players = await response.json();
-        players.sort((a, b) => b.Score - a.Score);
+        players.sort((a, b) => b.Average - a.Average);
 
         // display top 10 players
         const leaderboard = document.getElementById('leaderboard');
@@ -18,7 +18,7 @@ async function loadTopPlayers() {
             const player = players[i];
             const playerElement = document.createElement('tr');
             playerElement.className = 'player';
-            playerElement.innerHTML = `<td class="number">${i}</td> <td class="name">${player.Name}</td> <td class="score">${player.Score}</td>`;
+            playerElement.innerHTML = `<td class="number">${i}</td> <td class="name">${player.Name}</td> <td class="score">${player.Average}</td>`;
             leaderboard.appendChild(playerElement);
         }
     } catch (error) {
