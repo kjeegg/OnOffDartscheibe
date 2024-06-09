@@ -25,72 +25,102 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
     function updateGameDisplay(game) {
-        const base = game.Base;
+        const base = game;
 
         if (!base || !base.Player || base.Player.length === 0) {
             console.error('Invalid game data:', game);
             return;
         }
 
+        // Updating Player 1
         const player1 = base.Player[0];
         const player1Name = document.getElementById('player1Name');
         const player1Score = document.getElementById('score1');
-        const player1Throws = document.getElementById('player1Throws');
+        const player1ThrowsContainer = document.getElementById('player1Throws');
 
         player1Name.textContent = player1.Name;
-        player1Score.textContent = player1.Score.Score;
-        player1Throws.innerHTML = '';
-        if (player1.LastThrows) {
-            player1.LastThrows.forEach(throwData => {
-                const throwElement = document.createElement('div');
-                throwElement.className = 'throw';
-                throwElement.textContent = `${throwData.Number} x ${throwData.Modifier}`;
-                player1Throws.appendChild(throwElement);
-            });
+        player1Score.textContent = player1.Score?.Score || 0;
+
+        // Remove existing throw elements
+        while (player1ThrowsContainer.firstChild) {
+            player1ThrowsContainer.removeChild(player1ThrowsContainer.firstChild);
         }
 
+        // Create new throw elements from LastThrows
+        if (player1.LastThrows && player1.LastThrows.length > 0) {
+            player1.LastThrows.slice(0, 3).forEach((throwData, index) => {
+                const throwElement = document.createElement('div');
+                throwElement.className = `throw ${index + 1}-throw`;
+                throwElement.textContent = `${throwData.Number * throwData.Modifier}`;
+                player1ThrowsContainer.appendChild(throwElement);
+            });
+        } else {
+            for (let i = 0; i < 3; i++) {
+                const throwElement = document.createElement('div');
+                throwElement.className = `throw ${i + 1}-throw`;
+                throwElement.textContent = 'No throws available';
+                player1ThrowsContainer.appendChild(throwElement);
+            }
+        }
+
+        // Updating Player 2 if exists
         if (base.Player.length > 1) {
             const player2 = base.Player[1];
             const player2Name = document.getElementById('player2Name');
             const player2Score = document.getElementById('score2');
-            const player2Throws = document.getElementById('player2Throws');
+            const player2ThrowsContainer = document.getElementById('player2Throws');
 
             player2Name.textContent = player2.Name;
-            player2Score.textContent = player2.Score.Score;
-            player2Throws.innerHTML = '';
-            if (player2.LastThrows) {
-                player2.LastThrows.forEach(throwData => {
+            player2Score.textContent = player2.Score?.Score || 0;
+
+            // Remove existing throw elements
+            while (player2ThrowsContainer.firstChild) {
+                player2ThrowsContainer.removeChild(player2ThrowsContainer.firstChild);
+            }
+
+            // Create new throw elements from LastThrows
+            if (player2.LastThrows && player2.LastThrows.length > 0) {
+                player2.LastThrows.slice(0, 3).forEach((throwData, index) => {
                     const throwElement = document.createElement('div');
-                    throwElement.className = 'throw';
-                    throwElement.textContent = `${throwData.Number} x ${throwData.Modifier}`;
-                    player2Throws.appendChild(throwElement);
+                    throwElement.className = `throw ${index + 1}-throw`;
+                    throwElement.textContent = `${throwData.Number * throwData.Modifier}`;
+                    player2ThrowsContainer.appendChild(throwElement);
                 });
+            } else {
+                for (let i = 0; i < 3; i++) {
+                    const throwElement = document.createElement('div');
+                    throwElement.className = `throw ${i + 1}-throw`;
+                    throwElement.textContent = 'No throws available';
+                    player2ThrowsContainer.appendChild(throwElement);
+                }
             }
         }
 
         const historyTableBody = document.getElementById('historyTableBody');
-        historyTableBody.innerHTML = '';
-        base.Player.forEach(player => {
-            if (player.ThrowRounds) {
-                player.ThrowRounds.forEach(round => {
-                    if (round.Throws && round.Throws.length > 0) {
-                        const row = document.createElement('tr');
-                        const playerNameCell = document.createElement('td');
-                        const roundCell = document.createElement('td');
-                        const pointsCell = document.createElement('td');
+        if (historyTableBody) {
+            historyTableBody.innerHTML = '';
+            base.Player.forEach(player => {
+                if (player.ThrowRounds) {
+                    player.ThrowRounds.forEach(round => {
+                        if (round.Throws && round.Throws.length > 0) {
+                            const row = document.createElement('tr');
+                            const playerNameCell = document.createElement('td');
+                            const roundCell = document.createElement('td');
+                            const pointsCell = document.createElement('td');
 
-                        playerNameCell.textContent = player.Name;
-                        roundCell.textContent = round.Round;
-                        pointsCell.textContent = round.Throws.map(t => `${t.Number} x ${t.Modifier}`).join(', ');
+                            playerNameCell.textContent = player.Name;
+                            roundCell.textContent = round.Round;
+                            pointsCell.textContent = round.Throws.map(t => `${t.Number * t.Modifier}`).join(', ');
 
-                        row.appendChild(playerNameCell);
-                        row.appendChild(roundCell);
-                        row.appendChild(pointsCell);
-                        historyTableBody.appendChild(row);
-                    }
-                });
-            }
-        });
+                            row.appendChild(playerNameCell);
+                            row.appendChild(roundCell);
+                            row.appendChild(pointsCell);
+                            historyTableBody.appendChild(row);
+                        }
+                    });
+                }
+            });
+        }
 
         previousGameData = game;
     }
