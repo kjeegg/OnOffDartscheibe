@@ -36,7 +36,7 @@ document.addEventListener('DOMContentLoaded', function() {
         function handleInvalidThrow(throwData) {
             const throwValue = throwData.Number * throwData.Modifier;
             if (throwValue === 0) {
-                alert('Invalid throw: 0 points. This throw will not be recorded.');
+                //alert('Invalid throw: 0 points. This throw will not be recorded.');
                 return false;
             }
             return true;
