@@ -32,6 +32,16 @@ document.addEventListener('DOMContentLoaded', function() {
             return;
         }
 
+        // Function to handle invalid throws
+        function handleInvalidThrow(throwData) {
+            const throwValue = throwData.Number * throwData.Modifier;
+            if (throwValue === 0) {
+                alert('Invalid throw: 0 points. This throw will not be recorded.');
+                return false;
+            }
+            return true;
+        }
+
         // Updating Player 1
         const player1 = base.Player[0];
         const player1Name = document.getElementById('player1Name');
@@ -49,10 +59,12 @@ document.addEventListener('DOMContentLoaded', function() {
         // Create new throw elements from LastThrows
         if (player1.LastThrows && player1.LastThrows.length > 0) {
             player1.LastThrows.slice(0, 3).forEach((throwData, index) => {
-                const throwElement = document.createElement('div');
-                throwElement.className = `throw ${index + 1}-throw`;
-                throwElement.textContent = `${throwData.Number * throwData.Modifier}`;
-                player1ThrowsContainer.appendChild(throwElement);
+                if (handleInvalidThrow(throwData)) {
+                    const throwElement = document.createElement('div');
+                    throwElement.className = `throw ${index + 1}-throw`;
+                    throwElement.textContent = `${throwData.Number * throwData.Modifier}`;
+                    player1ThrowsContainer.appendChild(throwElement);
+                }
             });
         } else {
             for (let i = 0; i < 3; i++) {
@@ -81,10 +93,12 @@ document.addEventListener('DOMContentLoaded', function() {
             // Create new throw elements from LastThrows
             if (player2.LastThrows && player2.LastThrows.length > 0) {
                 player2.LastThrows.slice(0, 3).forEach((throwData, index) => {
-                    const throwElement = document.createElement('div');
-                    throwElement.className = `throw ${index + 1}-throw`;
-                    throwElement.textContent = `${throwData.Number * throwData.Modifier}`;
-                    player2ThrowsContainer.appendChild(throwElement);
+                    if (handleInvalidThrow(throwData)) {
+                        const throwElement = document.createElement('div');
+                        throwElement.className = `throw ${index + 1}-throw`;
+                        throwElement.textContent = `${throwData.Number * throwData.Modifier}`;
+                        player2ThrowsContainer.appendChild(throwElement);
+                    }
                 });
             } else {
                 for (let i = 0; i < 3; i++) {
