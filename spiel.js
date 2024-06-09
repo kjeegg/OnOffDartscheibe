@@ -19,13 +19,13 @@ document.addEventListener('DOMContentLoaded', function() {
 
             const game = await response.json();
             updateGameDisplay(game);
-            updatePlayerTurn(game);
+            //updatePlayerTurn(game);
         } catch (error) {
             console.error('Fehler beim Laden des Spiels:', error);
         }
     }
     function updateGameDisplay(game) {
-        const base = game.Base;
+        const base = game;
 
         if (!base || !base.Player || base.Player.length === 0) {
             console.error('Invalid game data:', game);
@@ -38,10 +38,10 @@ document.addEventListener('DOMContentLoaded', function() {
         const player1Throws = document.getElementById('player1Throws');
 
         player1Name.textContent = player1.Name;
-        player1Score.textContent = player1.Score.Score;
+        player1Score.textContent = player1.Score?.Score || 0;
         player1Throws.innerHTML = '';
-        if (player1.LastThrows) {
-            player1.LastThrows.forEach(throwData => {
+        if (player1.ThrowRounds) {
+            player1.ThrowRounds.forEach(throwData => {
                 const throwElement = document.createElement('div');
                 throwElement.className = 'throw';
                 throwElement.textContent = `${throwData.Number} x ${throwData.Modifier}`;
@@ -56,10 +56,10 @@ document.addEventListener('DOMContentLoaded', function() {
             const player2Throws = document.getElementById('player2Throws');
 
             player2Name.textContent = player2.Name;
-            player2Score.textContent = player2.Score.Score;
+            player2Score.textContent = player2.Score?.Score || 0;
             player2Throws.innerHTML = '';
-            if (player2.LastThrows) {
-                player2.LastThrows.forEach(throwData => {
+            if (player2.ThrowRounds) {
+                player2.ThrowRounds.forEach(throwData => {
                     const throwElement = document.createElement('div');
                     throwElement.className = 'throw';
                     throwElement.textContent = `${throwData.Number} x ${throwData.Modifier}`;
