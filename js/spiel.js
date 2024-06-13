@@ -55,13 +55,13 @@ document.addEventListener('DOMContentLoaded', function() {
         if (player1.LastThrows && player1.LastThrows.length > 0) {
             player1.LastThrows.slice(0, 3).forEach((throwData, index) => {
                 if (handleInvalidThrow(throwData)) {
-                    const throwElement = document.getElementById(`throw-1-${index + 1}`);
+                    const throwElement = document.getElementById(`throw-0-${index + 1}`);
                     throwElement.textContent = `${throwData.Number * throwData.Modifier}`;
                 }
             });
         } else {
             for (let i = 0; i < 3; i++) {
-                const throwElement = document.getElementById(`throw-1-${index + 1}`);
+                const throwElement = document.getElementById(`throw-0-${index + 1}`);
                 throwElement.textContent = '-';
             }
         }
@@ -81,13 +81,13 @@ document.addEventListener('DOMContentLoaded', function() {
             if (player2.LastThrows && player2.LastThrows.length > 0) {
                 player2.LastThrows.slice(0, 3).forEach((throwData, index) => {
                     if (handleInvalidThrow(throwData)) {
-                        const throwElement = document.getElementById(`throw-2-${index + 1}`);
+                        const throwElement = document.getElementById(`throw-1-${index + 1}`);
                         throwElement.textContent = `${throwData.Number * throwData.Modifier}`;
                     }
                 });
             } else {
                 for (let i = 0; i < 3; i++) {
-                    const throwElement = document.getElementById(`throw-2-${index + 1}`);
+                    const throwElement = document.getElementById(`throw-1-${index + 1}`);
                     throwElement.textContent = '-';
                 }
             }
@@ -121,23 +121,51 @@ document.addEventListener('DOMContentLoaded', function() {
 
         previousGameData = game;
     }
-
-    /* game buttons */
-    async function skipTurn() {
+    // nextPlayer: fetch game and nextPlayer, update last 3 throws, loadGame
+    async function nextPlayer() {
         const urlParams = new URLSearchParams(window.location.search);
         const gameId = urlParams.get('gameId');
-        console.log('Turn skipped');
         try {
-            const response = await fetch(`http://localhost:8000/api/game/${gameId}/nextPlayer`, {
+            const response = await fetch(`http://localhost:8000/api/game/${gameId}/display`, {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            });
+            if (!response.ok) {
+                throw new Error('Network response was not ok');
+            }
+            const game = await response.json();
+            ActivePlayer = game.ActivePlayer;
+        } catch (error) {
+            console.error('Fehler beim Laden des Spiels:', error);
+        }
+        try {
+            await fetch(`http://localhost:8000/api/game/${gameId}/nextPlayer`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
                 }
             });
         } catch (error) {
-            console.error('Fehler beim Überspringen des Zuges:', error);
+            console.error('Fehler beim Spielerwechsel:', error);
         }
+        clearLast3Throws(ActivePlayer);
+        console.log(ActivePlayer);
         loadGame();
+    }
+
+    function clearLast3Throws(player) {
+        for (let i = 0; i < 3; i++) {
+            const throwElement = document.getElementById(`throw-${player}-${i + 1}`);
+            throwElement.innerHTML = '';
+        }
+    }
+
+    /* game buttons */
+    async function skipTurn() {
+        nextPlayer();
+        console.log('Turn skipped');
     }
     const skipButton = document.getElementById('skip-turn');
     skipButton.addEventListener('click', skipTurn);
