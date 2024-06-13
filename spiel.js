@@ -137,6 +137,7 @@ document.addEventListener('DOMContentLoaded', function() {
         } catch (error) {
             console.error('Fehler beim Überspringen des Zuges:', error);
         }
+        loadGame();
     }
     const skipButton = document.getElementById('skip-turn');
     skipButton.addEventListener('click', skipTurn);

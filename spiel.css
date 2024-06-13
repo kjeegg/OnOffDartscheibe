@@ -29,6 +29,7 @@ body {
     }
     .pic {
         border: 10px solid var(--fh-mint);
+        /* box-shadow: 0px 0px 20px 0px var(--fh-mint); */
     }
     .score {
         color: var(--fh-mint);
@@ -87,11 +88,6 @@ body {
     border-radius: var(--corner-medium);
     margin-bottom: 20px;
     width: 100%;
-    transition: 0.2s;
-}
-.score:hover {
-    transform: scale(1.1);
-    transition: 0.2s;
 }
 .throw-history {
     display: inline-grid;

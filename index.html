@@ -96,10 +96,6 @@
                         <label for="playerName" class="text-dark form-label">Spielername</label>
                         <input type="text" class="form-control" id="playerName" required>
                     </div>
-                    <div class="mb-3">
-                        <label for="playerNickname" class="text-dark form-label">Nickname</label>
-                        <input type="text" class="form-control" id="playerNickname" required>
-                    </div>
                     <button type="submit" class="btn btn-primary">Spieler hinzufügen</button>
                 </form>
             </div>
@@ -270,11 +266,11 @@
     document.getElementById('addPlayerForm').addEventListener('submit', async function(event) {
         event.preventDefault();
         const playerName = document.getElementById('playerName').value;
-        const playerNickname = document.getElementById('playerNickname').value;
+        // const playerNickname = document.getElementById('playerNickname').value;
 
         const playerData = {
             "name": playerName,
-            "nickname": playerNickname
+            // "nickname": playerNickname
         };
 
         try {
@@ -291,7 +287,8 @@
             }
 
             const data = await response.json();
-            alert('Spieler erfolgreich hinzugefügt!');
+            alert('Spieler ID: ' + data.UID);
+            console.log(data.UID);
             document.getElementById('addPlayerForm').reset();
         } catch (error) {
             alert('Fehler beim Hinzufügen des Spielers: ' + error.message);
