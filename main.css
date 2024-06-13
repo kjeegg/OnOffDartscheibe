@@ -1,7 +1,7 @@
 :root {
     --bg-color: white;
     --font-color: black;
-    --arrow-icon: url(../images/arrow_black.svg);
+    --arrow-icon: url(/assets/arrow_black.svg);
     
     /* fonts */
     --base: 18px;
@@ -11,7 +11,8 @@
     --xlarge: 67px;
 
     /* colors */
-    --light-gray: #D9D9D9;
+    --light-gray: #f3f3f3;
+    --dark-gray: #121212;
     --fh-mint: #00b1ac;
     --red: rgb(232, 54, 54);
     
@@ -25,7 +26,7 @@
 [data-theme="dark"] {
     --bg-color: black;
     --font-color: white;
-    --arrow-icon: url(../images/arrow_white.svg);
+    --arrow-icon: url(/assets/arrow_white.svg);
 }
 body {
     font-family: Outfit, sans-serif;
@@ -47,7 +48,9 @@ h2{
     font-size: var(--base);
     font-weight: 500;
 }
-
+.box-shadow {
+    box-shadow: 7px 10px 10px 0px rgba(0,0,0,0.1);
+}
 
 /* footer */
 footer {
@@ -60,7 +63,17 @@ footer {
     padding: 10px;
     background-color: black;
 }
+#footer-wrapper {
+    display: flex;
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+    flex-wrap: nowrap;
+    position: relative;
+}
 .footer-div {
+    position: absolute;
     display: flex;
     justify-content: center;
     align-items: center;
@@ -144,7 +157,7 @@ footer {
     background-color: var(--font-color);
     color: var(--bg-color);
     border: none;
-    border-radius: var(--corner-large);
+    border-radius: var(--corner-medium);
     text-decoration: none;
     font-size: var(--medium);
     font-weight: 600;
@@ -152,9 +165,11 @@ footer {
     padding-left: 20px;
     padding-right: 20px;
     transition: 0.2s;
+    box-shadow: 5px 5px 5px 0px rgba(0, 0, 0, 0.1);
 }
 .button-big:hover {
     background-color: var(--fh-mint);
+    box-shadow: 0px 0px 20px 0px var(--fh-mint);
     color: white;
     transform: scale(1.1);
     transition: 0.2s;

@@ -6,7 +6,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const gameId = urlParams.get('gameId');
 
         try {
-            const response = await fetch(`https://api.dascr.local/api/game/${gameId}/display`, {
+            const response = await fetch(`http://localhost:8000/api/game/${gameId}/display`, {
                 method: 'GET',
                 headers: {
                     'Content-Type': 'application/json'
@@ -51,27 +51,18 @@ document.addEventListener('DOMContentLoaded', function() {
         player1Name.textContent = player1.Name;
         player1Score.textContent = player1.Score?.Score || 0;
 
-        // Remove existing throw elements
-        while (player1ThrowsContainer.firstChild) {
-            player1ThrowsContainer.removeChild(player1ThrowsContainer.firstChild);
-        }
-
-        // Create new throw elements from LastThrowsds
+        // Fill in the last 3 throws
         if (player1.LastThrows && player1.LastThrows.length > 0) {
             player1.LastThrows.slice(0, 3).forEach((throwData, index) => {
                 if (handleInvalidThrow(throwData)) {
-                    const throwElement = document.createElement('div');
-                    throwElement.className = `throw ${index + 1}-throw`;
+                    const throwElement = document.getElementById(`throw-1-${index + 1}`);
                     throwElement.textContent = `${throwData.Number * throwData.Modifier}`;
-                    player1ThrowsContainer.appendChild(throwElement);
                 }
             });
         } else {
             for (let i = 0; i < 3; i++) {
-                const throwElement = document.createElement('div');
-                throwElement.className = `throw ${i + 1}-throw`;
-                throwElement.textContent = 'No throws available';
-                player1ThrowsContainer.appendChild(throwElement);
+                const throwElement = document.getElementById(`throw-1-${index + 1}`);
+                throwElement.textContent = '-';
             }
         }
 
@@ -85,27 +76,19 @@ document.addEventListener('DOMContentLoaded', function() {
             player2Name.textContent = player2.Name;
             player2Score.textContent = player2.Score?.Score || 0;
 
-            // Remove existing throw elements
-            while (player2ThrowsContainer.firstChild) {
-                player2ThrowsContainer.removeChild(player2ThrowsContainer.firstChild);
-            }
 
-            // Create new throw elements from LastThrows
+            // Fill in the last 3 throws
             if (player2.LastThrows && player2.LastThrows.length > 0) {
                 player2.LastThrows.slice(0, 3).forEach((throwData, index) => {
                     if (handleInvalidThrow(throwData)) {
-                        const throwElement = document.createElement('div');
-                        throwElement.className = `throw ${index + 1}-throw`;
+                        const throwElement = document.getElementById(`throw-2-${index + 1}`);
                         throwElement.textContent = `${throwData.Number * throwData.Modifier}`;
-                        player2ThrowsContainer.appendChild(throwElement);
                     }
                 });
             } else {
                 for (let i = 0; i < 3; i++) {
-                    const throwElement = document.createElement('div');
-                    throwElement.className = `throw ${i + 1}-throw`;
-                    throwElement.textContent = 'No throws available';
-                    player2ThrowsContainer.appendChild(throwElement);
+                    const throwElement = document.getElementById(`throw-2-${index + 1}`);
+                    throwElement.textContent = '-';
                 }
             }
         }
@@ -141,8 +124,19 @@ document.addEventListener('DOMContentLoaded', function() {
 
     /* game buttons */
     async function skipTurn() {
+        const urlParams = new URLSearchParams(window.location.search);
+        const gameId = urlParams.get('gameId');
         console.log('Turn skipped');
-        alert('Turn skipped');
+        try {
+            const response = await fetch(`http://localhost:8000/api/game/${gameId}/nextPlayer`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            });
+        } catch (error) {
+            console.error('Fehler beim Überspringen des Zuges:', error);
+        }
     }
     const skipButton = document.getElementById('skip-turn');
     skipButton.addEventListener('click', skipTurn);
@@ -162,7 +156,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const gameId = urlParams.get('gameId');
 
         try {
-            const response = await fetch(`https://api.dascr.local/api/game/${gameId}`, {
+            const response = await fetch(`http://localhost:8000/api/game/${gameId}`, {
                 method: 'DELETE',
                 headers: {
                     'Content-Type': 'application/json'
@@ -187,24 +181,12 @@ document.addEventListener('DOMContentLoaded', function() {
         loadGame();
         setInterval(loadGame, 5000); // Update every 5 seconds
     };
-    
-    function getPlayerTurn(game) {
-        const base = game.Base;
-        const player1 = base.Player[0];
-        const player2 = base.Player[1];
-
-        if (player1.LastThrows % 3 === 0 && player1.Score !== 0) {
-            return 1;
-        }
-        if (player2.LastThrows % 3 === 0 && player2.Score !== 0) {
-            return 2;
-        }
-    }
     function updatePlayerTurn(game) {
-        if(getPlayerTurn(game) === 1) {
+        if(game.ActivePlayer === 0) {
             document.getElementById('player1-box').classList.add('active');
             document.getElementById('player2-box').classList.remove('active');
             document.getElementById('arrow-wrapper').classList.remove('active');
+
         }
         else {
             document.getElementById('player1-box').classList.remove('active');
@@ -212,10 +194,4 @@ document.addEventListener('DOMContentLoaded', function() {
             document.getElementById('arrow-wrapper').classList.add('active');
         }
     }
-    function manualPlayerTurn() {
-        document.getElementById('player1-box').classList.toggle('active');
-        document.getElementById('player2-box').classList.toggle('active');
-        document.getElementById('arrow-wrapper').classList.toggle('active');
-    }
-    document.getElementById('arrow-wrapper').addEventListener('click', manualPlayerTurn);
 });

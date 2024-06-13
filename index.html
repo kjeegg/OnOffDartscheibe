@@ -157,7 +157,7 @@
 <script>
     async function getHighestGameUID() {
         try {
-            const response = await fetch('https://api.dascr.local/api/game', {
+            const response = await fetch('http://localhost:8000/api/game', {
                 method: 'GET',
                 headers: {
                     'Content-Type': 'application/json'
@@ -191,7 +191,7 @@
             return;
         }
 
-        const newGameId = parseInt(highestUID + 1);
+        const newGameId = String(parseInt(highestUID) + 1);
         const player1Id = parseInt(document.getElementById('player1Id').value);
         const player2Id = parseInt(document.getElementById('player2Id').value);
 
@@ -210,7 +210,7 @@
         };
 
         try {
-            const response = await fetch(`https://api.dascr.local/api/game/${newGameId}`, {
+            const response = await fetch(`http://localhost:8000/api/game/${newGameId}`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
@@ -235,7 +235,7 @@
         const gameId = document.getElementById('joinGameId').value;
 
         try {
-            const response = await fetch(`https://api.dascr.local/api/game/${gameId}`, {
+            const response = await fetch(`http://localhost:8000/api/game/${gameId}`, {
                 method: 'GET',
                 headers: {
                     'Content-Type': 'application/json'
@@ -278,7 +278,7 @@
         };
 
         try {
-            const response = await fetch('https://api.dascr.local/api/player', {
+            const response = await fetch('http://localhost:8000/api/player', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
