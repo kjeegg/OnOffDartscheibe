@@ -20,7 +20,7 @@ welches das aktuelle aktive Spiel ist
 
 UPDATE (03.06.2024): Ein Fehlwurf wird erstmal als ein Wurf mit 0 Punkten behandelt
 
-
+UPDATE (16.06.2024): Der Spielerwechsel findet nun an anderer Stelle automatisch statt
 
 Daher werden folgende API funktionalitäten vom Program benötigt:
   - GET  /game := Um die Game id des aktuellsten Spiels heraus zu finden
