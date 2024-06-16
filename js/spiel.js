@@ -6,7 +6,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const gameId = urlParams.get('gameId');
 
         try {
-            const response = await fetch(`http://localhost:8000/api/game/${gameId}/display`, {
+            const response = await fetch(`api.php?apiFunction=getGameDisplay&gameId=${gameId}`, {
                 method: 'GET',
                 headers: {
                     'Content-Type': 'application/json'
@@ -126,7 +126,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const urlParams = new URLSearchParams(window.location.search);
         const gameId = urlParams.get('gameId');
         try {
-            const response = await fetch(`http://localhost:8000/api/game/${gameId}/display`, {
+            const response = await fetch(`api.php?apiFunction=getGameDisplay&gameId=${gameId}`, {
                 method: 'GET',
                 headers: {
                     'Content-Type': 'application/json'
@@ -141,7 +141,7 @@ document.addEventListener('DOMContentLoaded', function() {
             console.error('Fehler beim Laden des Spiels:', error);
         }
         try {
-            await fetch(`http://localhost:8000/api/game/${gameId}/nextPlayer`, {
+            await fetch(`api.php?apiFunction=nextPlayer&gameId=${gameId}`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
@@ -185,7 +185,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const gameId = urlParams.get('gameId');
 
         try {
-            const response = await fetch(`http://localhost:8000/api/game/${gameId}`, {
+            const response = await fetch(`api.php?apiFunction=endGame&gameId=${gameId}`, {
                 method: 'DELETE',
                 headers: {
                     'Content-Type': 'application/json'

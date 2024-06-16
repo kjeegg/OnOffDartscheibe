@@ -1,7 +1,7 @@
 // no idea if this works
 async function loadTopPlayers() {
     try {
-        const response = await fetch('http://localhost:8000/api/player', {
+        const response = await fetch('api.php?apiFunction=getTopPlayers', {
             method: 'GET',
             headers: {
                 'Content-Type': 'application/json'

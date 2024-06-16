@@ -1,6 +1,6 @@
 async function getHighestGameUID() {
     try {
-        const response = await fetch('http://localhost:8000/api/game', {
+        const response = await fetch('api.php?apiFunction=getHighestGameUID', {
             method: 'GET',
             headers: {
                 'Content-Type': 'application/json'
@@ -53,7 +53,7 @@ document.getElementById('createGameForm').addEventListener('submit', async funct
     };
 
     try {
-        const response = await fetch(`http://localhost:8000/api/game/${newGameId}`, {
+        const response = await fetch(`api.php?apiFunction=createGame&gameId=${newGameId}`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
@@ -78,7 +78,7 @@ document.getElementById('joinGameForm').addEventListener('submit', async functio
     const gameId = document.getElementById('joinGameId').value;
 
     try {
-        const response = await fetch(`http://localhost:8000/api/game/${gameId}`, {
+        const response = await fetch(`api.php?apiFunction=getGame&gameId=${gameId}`, {
             method: 'GET',
             headers: {
                 'Content-Type': 'application/json'
