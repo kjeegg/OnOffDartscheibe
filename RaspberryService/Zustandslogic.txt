@@ -1,0 +1,67 @@
+WURF erkannt === heißt hier auch Fehlwruf erkannt
+
+
+
+
+
+WURF erkannt - INIT:
+	Wenn ich im Init zustand bin und einen wurf festelle, und dabei nicht übertrete
+	prüfe ich ob es bereits irgendwelche würfe laut api gab.
+
+	Wenn NICHT:
+		Dann wechsel ich aus Init -> THROW_2 
+		und LOKAL_CURRENT_SPIELER = api_aktivePlayer
+	WENN SCHON:
+		DANN wechsel ich aus Init -> OTHER_PLAYER
+		und LOKAL_CURRENT_SPIELER != api_aktivePlayer
+		verwerfe wurf
+
+
+
+WURF erkannt - Throw_1/2:
+	übertrage wurf, bei erfolgreicher übertragung änder in nächst höheren zustand
+
+WURF erkannt - Throw_3:
+	übertrage wurf, bei erfolgreicher übertragung änder in OTHER_PLAYER zustand
+
+
+WURF erkannt - OTHER_PLAYER | ÜBERTRITT | NG:
+	Verwerfe wurf, und änder nix
+
+-------------------------------------------------------------------------------------------
+
+Übertritt erkannt - INIT:
+	bleibe in init (wenn geworfen wird passsiert die auswertungslogic in init die den wurf ignoriert)
+
+Übertritt erkannt - THROW1-3: 
+	wechsel in übertritt zustand
+
+Übertritt erkannt - Other Player:
+	passiert nix
+
+
+übertritt nicht mehr erkannt:
+	-> zustand = alterZustand (aka wechsel zurück)
+
+
+
+-------------------------------------------------------------------------------------------
+
+checkGameStateChanges() - INIT:
+	wenn undolog laut api > 1, aber selsbt noch keinen wurf festgestllt: (undolgog enthält bei der erstellung nur das erstellungs event, daher 1)
+		lokalPlayer != neuAktivPlayer
+		curState = OTHER_PLAYER
+	wenn undolog laut api == 1: (nur erstellungsevent drin)
+		passiert nix (wir warten auf wurf von gegner oder eigenen wurf)
+
+checkGameStateChanges() - ÜBERTRITT:
+	passiert nix (kann uns ja egal sein, solang wir in nem ungültigen  state sind warten wir)
+
+checkGameStateChanges() - THROW1-3:
+	passiert nix, wir sind dran und warten nur dadrauf dasn wurf stattfindet
+
+checkGameStateChanges() - OTHER_PLAYER:
+	wenn neuAktivePlayer == unserSpieler:
+		wechsel in Throw_1
+	sonst:
+		passiert nix

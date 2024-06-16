@@ -22,6 +22,8 @@ UPDATE (03.06.2024): Ein Fehlwurf wird erstmal als ein Wurf mit 0 Punkten behand
 
 UPDATE (16.06.2024): Der Spielerwechsel findet nun an anderer Stelle automatisch statt
 
+UPDATE (17.06.2024): Der Spielerwechsel findet doch wieder hier statt + implementation des ganzen als Statemachine
+
 Daher werden folgende API funktionalitäten vom Program benötigt:
   - GET  /game := Um die Game id des aktuellsten Spiels heraus zu finden
   - GET  /game/id := Um den aktuellen Zustand des Spiels zu ermitteln
@@ -36,6 +38,9 @@ Aktuelle Todos:
   - [x] Gamestate Updates von der API abfragen
 - [X] Einen Permanenten Connection Check Mechanismus/Daemon integrieren, welcher auch Neustarten + Pausieren kann wenn Verbindungen unterbrochen wurden
   - [ ] Vielleicht sogar via Heartbeed Mechanismus (würde aber anpassungen in API und Arduino Code erfordern)
+- [ ] ALLE Zustände vollständig korrekt implementiert
+- [ ] Neustart mechanimsums für die Threads, falls API verbindung abbricht
+
 - [ ] LED Steuerung
 - [ ] Camera Linien erkennung und verarbeitung
 - [ ] Camera Feed wird an Server weitergesendet
