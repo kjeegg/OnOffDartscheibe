@@ -23,6 +23,7 @@ WURF erkannt - Throw_1/2:
 
 WURF erkannt - Throw_3:
 	übertrage wurf, bei erfolgreicher übertragung änder in OTHER_PLAYER zustand
+	+ initiere Spielerwechsel
 
 
 WURF erkannt - OTHER_PLAYER | ÜBERTRITT | NG:
@@ -55,9 +56,19 @@ checkGameStateChanges() - INIT:
 		passiert nix (wir warten auf wurf von gegner oder eigenen wurf)
 
 checkGameStateChanges() - ÜBERTRITT:
+	wenn aktivePlayer != current Player: (wir haben übertreten und anderer ist dran):
+		passiert nix
+
+	wenn aktiv player == current player:
+		prüfen ob der vorherige zustand einer der lokal aktiven Zustände(THROW1-3) war, wenn ja:
+			passiert nix
+		sonst: (vorher war anderer spieler dran, wir sind jezt aber dran weil anderer spieler fertig)
+			setzte den vorherigen zustand (ak den vor ÜBERTRIIT) auf THROW_1 (damit wir wenn der übertrtitt aufhört, automatisch dran sind)
+
+
 	passiert nix (kann uns ja egal sein, solang wir in nem ungültigen  state sind warten wir)
 
-checkGameStateChanges() - THROW1-3:
+checkGameStateChanges() - THROW1-3 oder OTHER_PLAYER:
 	passiert nix, wir sind dran und warten nur dadrauf dasn wurf stattfindet
 
 checkGameStateChanges() - OTHER_PLAYER:
