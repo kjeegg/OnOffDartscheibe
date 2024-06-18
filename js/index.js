@@ -13,11 +13,13 @@ async function getHighestGameUID() {
 
         const games = await response.json();
         let highestUID = 0;
-        games.forEach(game => {
-            if (game.uid > highestUID) {
-                highestUID = game.uid;
-            }
-        });
+        if (games !== null) {
+            games.forEach(game => {
+                if (game.uid > highestUID) {
+                    highestUID = game.uid;
+                }
+            });
+        }
         return highestUID;
     } catch (error) {
         console.error('Fehler beim Laden der Spiele:', error);

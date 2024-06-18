@@ -63,6 +63,11 @@ if (isset($_GET['apiFunction'])) {
             $queryParams = '/' . $_GET['gameId'] . '/nextPlayer';
             forwardRequest('/game' . $queryParams, '', 'POST');
             break;
+        case 'manualEntry':
+            $body = json_decode(file_get_contents('php://input'), true);
+            $queryParams = '/' . $_GET['gameId'] . '/throw/' . $body['number'] . '/' . $body['modifier'];
+            forwardRequest('/game' . $queryParams, '', 'POST');
+            break;
         case 'endGame':
             $queryParams = '/' . $_GET['gameId'];
             forwardRequest('/game' . $queryParams, '', 'DELETE');

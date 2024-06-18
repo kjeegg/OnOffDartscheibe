@@ -2,8 +2,7 @@
 document.addEventListener('DOMContentLoaded', function() {
     let previousGameData = null;
     async function loadGame() {
-        const urlParams = new URLSearchParams(window.location.search);
-        const gameId = urlParams.get('gameId');
+        const gameId = getGameId();
 
         try {
             const response = await fetch(`api.php?apiFunction=getGameDisplay&gameId=${gameId}`, {
@@ -23,6 +22,10 @@ document.addEventListener('DOMContentLoaded', function() {
         } catch (error) {
             console.error('Fehler beim Laden des Spiels:', error);
         }
+    }
+    function getGameId() {
+        const urlParams = new URLSearchParams(window.location.search);
+        return urlParams.get('gameId');
     }
     function updateGameDisplay(game) {
         const base = game;
@@ -123,8 +126,8 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     // nextPlayer: fetch game and nextPlayer, update last 3 throws, loadGame
     async function nextPlayer() {
-        const urlParams = new URLSearchParams(window.location.search);
-        const gameId = urlParams.get('gameId');
+        const gameId = getGameId();
+        // get game
         try {
             const response = await fetch(`api.php?apiFunction=getGameDisplay&gameId=${gameId}`, {
                 method: 'GET',
@@ -140,6 +143,7 @@ document.addEventListener('DOMContentLoaded', function() {
         } catch (error) {
             console.error('Fehler beim Laden des Spiels:', error);
         }
+        // get ActivePlayer
         try {
             await fetch(`api.php?apiFunction=nextPlayer&gameId=${gameId}`, {
                 method: 'POST',
@@ -150,14 +154,14 @@ document.addEventListener('DOMContentLoaded', function() {
         } catch (error) {
             console.error('Fehler beim Spielerwechsel:', error);
         }
-        clearLast3Throws(ActivePlayer);
-        console.log(ActivePlayer);
+        console.log('ActivePlayer: ' + ActivePlayer);
         loadGame();
+        clearLast3Throws(ActivePlayer);
     }
 
     function clearLast3Throws(player) {
-        for (let i = 0; i < 3; i++) {
-            const throwElement = document.getElementById(`throw-${player}-${i + 1}`);
+        for (let i = 1; i <= 3; i++) {
+            const throwElement = document.getElementById(`throw-${player}-${i}`);
             throwElement.innerHTML = '';
         }
     }
@@ -170,19 +174,39 @@ document.addEventListener('DOMContentLoaded', function() {
     const skipButton = document.getElementById('skip-turn');
     skipButton.addEventListener('click', skipTurn);
 
-    async function manualEntry() {
-        const points = prompt('Bitte geben Sie die Punkte ein:');
-        if (points !== null) {
-            console.log('Manual entry:', points);
-            alert('Punkte manuell eingetragen: ' + points);
+    // manualEntry
+    document.getElementById('manualEntryForm').addEventListener('submit', async function(event) {
+        event.preventDefault();
+        const gameId = getGameId();
+
+        const points = parseInt(document.getElementById('manualEntryPoints').value);
+        const modifier = parseInt(document.getElementById('manualEntryModifier').value);
+        // TODO: Validate points and modifier
+        try {
+            const response = await fetch(`api.php?apiFunction=manualEntry&gameId=${gameId}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ 
+                    number: points, 
+                    modifier: modifier })
+            });
+            console.log('Response:', response);
+            if (!response.ok) {
+                throw new Error('Network response was not ok');
+            }
+            document.getElementById('manualEntryForm').reset();
+            loadGame();
+        } catch (error) {
+            console.error('Fehler beim manuellen Eintragen:', error);
         }
-    }
+    });
     const manualEntryButton = document.getElementById('manual-entry');
-    manualEntryButton.addEventListener('click', manualEntry);
+    manualEntryButton.addEventListener('click', loadGame());
 
     async function endGame() {
-        const urlParams = new URLSearchParams(window.location.search);
-        const gameId = urlParams.get('gameId');
+        const gameId = getGameId();
 
         try {
             const response = await fetch(`api.php?apiFunction=endGame&gameId=${gameId}`, {
@@ -206,10 +230,6 @@ document.addEventListener('DOMContentLoaded', function() {
     const endGameButton = document.getElementById('end-game');
     endGameButton.addEventListener('click', endGame);
     
-    window.onload = function() {
-        loadGame();
-        setInterval(loadGame, 5000); // Update every 5 seconds
-    };
     function updatePlayerTurn(game) {
         if(game.ActivePlayer === 0) {
             document.getElementById('player1-box').classList.add('active');
@@ -223,4 +243,10 @@ document.addEventListener('DOMContentLoaded', function() {
             document.getElementById('arrow-wrapper').classList.add('active');
         }
     }
+    
+
+    window.onload = function() {
+        loadGame();
+        setInterval(loadGame, 5000); // Update every 5 seconds
+    };
 });
