@@ -123,7 +123,7 @@ document.getElementById('addPlayerForm').addEventListener('submit', async functi
     };
 
     try {
-        const response = await fetch('http://localhost:8000/api/player', {
+        const response = await fetch('api.php?apiFunction=addPlayer', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'

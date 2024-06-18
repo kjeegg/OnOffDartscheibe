@@ -24,7 +24,16 @@ function forwardRequest($apiFunction, $queryParams = '', $method = 'GET', $body 
     $response = file_get_contents($url, false, $context);
 
     if ($response === FALSE) {
-        echo json_encode(['error' => 'Error occurred while forwarding the request']);
+        $error = error_get_last();
+        http_response_code(500);
+        echo json_encode([
+            'error' => 'Error occurred while forwarding the request',
+            'details' => $error['message'],
+            'url' => $url,
+            'method' => $method,
+            'body' => $body,
+            'http_response_header' => isset($http_response_header) ? $http_response_header : null
+        ]);
         return;
     }
 
@@ -54,6 +63,9 @@ if (isset($_GET['apiFunction'])) {
             break;
         case 'getTopPlayers':
             forwardRequest('/player');
+            break;
+        case 'getAllGames':
+            forwardRequest('/game');
             break;
         case 'getGameDisplay':
             $queryParams = '/' . $_GET['gameId'] . '/display';
