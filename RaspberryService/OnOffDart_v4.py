@@ -7,64 +7,70 @@ import threading
 from threading import Lock
 import time
 
-ARDUINO_PORT = "COM8" #Der Port an welchem Der Arduino via USB angeschlossen ist
-BAUD_RATE = 9600 #Die Baud Rate für die Arduino-USB-Serial Verbindnung
-SERIAL_TIMEOUT = 3#Der Maximal zulässige Tiemout für die Serielle Verbindung
+ARDUINO_PORT:str = "COM8" #Der Port an welchem Der Arduino via USB angeschlossen ist
+BAUD_RATE:int = 9600 #Die Baud Rate für die Arduino-USB-Serial Verbindnung
+SERIAL_TIMEOUT:int = 3#Der Maximal zulässige Tiemout für die Serielle Verbindung
 
-API_SERVER_DOMAIN = "http://localhost:8000/api"#Die Domain des API-Servers
+API_SERVER_DOMAIN:str = "http://localhost:8000/api"#Die Domain des API-Servers
 
-THREAD_CHECK_INTERVAL = 5 # Prüfe alle X Sekunden ob noch alle Threads laufen oder iwo probleme aufgetreten sind, versuche bei Problemen neu zu starten
+THREAD_CHECK_INTERVAL:int = 5 # Prüfe alle X Sekunden ob noch alle Threads laufen oder iwo probleme aufgetreten sind, versuche bei Problemen neu zu starten
 
+LOG_FILE_LOCATION = './1.log'
 
 '''
 Das Interval wann für das aktuell laufende Spiel nach updates gesucht werden soll.
 MAX = Die Obergrenze wenn das lokale Spiel dran ist.
 MIN = Wenn der andere Spieler dran ist, oder wir im INIT sind
 '''
-CHECK_GAME_UPDATE_INTERVAL_MAX = 5
-CHECK_GAME_UPDATE_INTERVAL_MIN = 2
+CHECK_GAME_UPDATE_INTERVAL_MAX:int = 5
+CHECK_GAME_UPDATE_INTERVAL_MIN:int = 2
 
-SHOW_GAME_INTERVALL = 3 #Das intervall in dem der Aktuelle Spielzustand auf der Konsole angezeigt werden soll
+SHOW_GAME_INTERVALL:int = 3 #Das intervall in dem der Aktuelle Spielzustand auf der Konsole angezeigt werden soll
 
-CHECK_GLOBAL_GAME_INTERVAL = 10 #Prüft alle X Sekunden ob es ein neues Spiel gibt
+
+
+LOCAL_GAME_UID:int = -1#Muss über Display ein gegeben werden
+LOCAL_PLAYER_UID:int = -1#Wird auch übers Display eingestellt
+
+
+
 
 
 
 #-----------------------------
 '''
-NG = No Game -> Es wurde noch keine UID fürs aktuelle Spiel ermittelt
 INIT = Es wurde ne UID ermittelt aber der aktuelle Spieler für die aktuelle Scheibe ist noch nicht ermittelt
 THROW_1 - 3 =  Verschiedene Würfe
 OTHER_PLAYER = Der andere Spieler ist am Zug
 UEBERTRITT = Es wurde ein lokaler übertritt festgestellt
+WIN = Das Spiel ist Vorbei, und ein Spieler hat gewonnen
 
 '''
-PREVIOUS_STATE:str = 'NG' #Der Vorherige Zustand des Automaten (bei start NG) (für zustände+übergaänge siehe Zustandsdiagram in Dokumentation)
+PREVIOUS_STATE:str = 'INIT' #Der Vorherige Zustand des Automaten (bei start INIT) (für zustände+übergaänge siehe Zustandsdiagram in Dokumentation)
 PREVIOUS_STATE_LOCK = Lock()
-CURRENT_STATE:str = 'NG' #Der Aktuelle Zustand des Automaten (bei start NG) (für zustände+übergaänge siehe Zustandsdiagram in Dokumentation)
+CURRENT_STATE:str = 'INIT' #Der Aktuelle Zustand des Automaten (bei start INIT) (für zustände+übergaänge siehe Zustandsdiagram in Dokumentation)
 CURRENT_STATE_LOCK = Lock()
 
-CURRENT_GAME_UID:int = None #Speichert die UID des aktuell gespielten Spiels
-CURRENT_GAME_UID_LOCK = Lock()
-
-LOKAL_PLAYER = None #Repräsentiert den lokalen Spieler (als Spieler objekt)
+SPIEL = None#Speichert das aktuellste Spielupdate
+SPIEL_LOCK = Lock()
+LOKAL_PLAYER = None
 LOKAL_PLAYER_LOCK = Lock()
 
-PREVIOUS_SPIEL = None#Speichert den lezten Spiel Update Fetch ein
-PREVIOUS_SPIEL_LOCK = Lock()
+
+
 
 
 serial_conn = serial.Serial() #Das Objekt für die Serielle Verbindung (wird beim Verbidnugnscheck initialisiert)
 
 # Create a custom logger
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.DEBUG)#Logger loggt erstmal alles
+logger.setLevel(logging.INFO)#Logger loggt erstmal alles
 
 # Create handlers
 consoleLogHandler = logging.StreamHandler()
-consoleLogHandler.setLevel(logging.INFO)#Auf der console wird maximal INFO lvl ausgegeben
+consoleLogHandler.setLevel(logging.DEBUG)#Auf der console wird maximal INFO lvl ausgegeben
 
-logFileHandler = logging.FileHandler('1.log')
+logFileHandler = logging.FileHandler(LOG_FILE_LOCATION)
 logFileHandler.setLevel(logging.DEBUG)#In der Log Datei wird alles gespeicehrt bis einschließlich DEBUG
 
 consoleLogFormat = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s', "%d-%m-%Y %H:%M:%S")
@@ -132,6 +138,32 @@ def enableLEDs():
 	return
 
 
+
+'''
+Zeigt dem Spieler an das er/sie Verloren hat
+'''
+def showLoose():
+	'''
+	TODO:
+		implement. soll später via leds anzeigen, aktuell Placeholder mit einfacher Text ausgabe
+	'''
+	print("PLACEHOLDER: Sie haben leider verloren")
+	return
+
+
+'''
+Zeigt dem Spieler an das er/sie Gewonnen hat
+'''
+def showWin():
+	'''
+	TODO:
+		implement. soll später via leds anzeigen, aktuell Placeholder mit einfacher Text ausgabe
+	'''
+	print("PLACEHOLDER: Sie haben gewonnen")
+	return
+
+
+
 '''
 Zeigt dem Spieler an das er/sie nicht werfen darf
 '''
@@ -195,8 +227,12 @@ Erhält die JSON von einem Gameobject und gibt ein Spiel Objekt zurück
 
 '''
 def createSpiel(gameJSON: json) -> Spiel:
+	if gameJSON.get('GameObject') != None:
+		gameJSON = gameJSON.get('GameObject').get('Base')
+
 	if(gameJSON.get('Base') != None):#Bei ner etwas anders formatierten json einen Layer tiefer gehen
 		gameJSON = gameJSON.get('Base')
+
 	uid = gameJSON.get('UID')
 	game = gameJSON.get('Game')
 	players = gameJSON.get("Player")
@@ -261,51 +297,15 @@ def fetchUIDGame(uid : int) -> Spiel:
 
 
 
-'''
-Versucht ein gefundenes Spiel mit ungültiger UID zu löschen
-'''
-def deleteBadUID(uid):
-	try:
-		delete = requests.delete(f"{API_SERVER_DOMAIN}/game/{str(uid)}", verify=False)
-	except requests.exceptions.ConnectionError:
-		logger.critical('Es Konnte keine Verbindung zur API aufgebaut werden!')
-	return
-
-
-'''
-Gibt das aktuelle Spiel zurück in dem es aus der liste aller Spieler das mit höchster uid bestimmt 
-Wenn eine ungültige UID in den Daten gefunden wird, wird diese Ignoriert
-
-@param gamesJSON eine gamesJSON welche alle Spiele enthält 
-@return json Die json des aktuell laufenden Spiels. None, falls keine gültige UID gefunden wurde. -1 Wenn eine UID gelöscht wurde (-> nochmal request stellen)
-'''
-def fetchCurrentGameJson(gamesJSON: json) -> json:
-	max_uid = max_index = curUID = -1#Die höchste gefundene UID & zugeöriger INDEX
-	try:
-		if gamesJSON != None:
-			for i in range(len(gamesJSON)): #Durchsuche gamesJson nach höchster uid (nötig da reihenfolge der daten unbestimmt ist)
-				curUID = gamesJSON[i].get('uid')
-				if int(curUID) > max_uid:
-					max_uid = int(gamesJSON[i].get('uid'))
-					max_index = i
-		else:
-			logger.error("Es wurden keine Daten zur auswertung gegeben. Diese Funktion hätte nicht ausgeführt werden dürfen")
-			return None
-	except ValueError: #Es befand sich eine ungültige uid in der JSON
-		logger.warning(f"Ungültige UID in den Daten gefunden: {curUID}. Versuche diese zu Löschen, und nochmal nach einer gültigen ID zu suchen")
-		deleteBadUID(curUID)
-		return -1
-
-
-	return gamesJSON[max_index].get('GameObject').get('Base') if max_index>-1 else None
 
 
 '''
 Fetched einmal alle Spiele von der API
-@return spiele json, oder None (falls keine exestieren oder der Verbindugnsaufbau gescheitert ist)
+@return Spiel[] Eine Liste aller Spiele
+@return None falls der Verbindungsaufbau gescheitert ist
 @throws requests.exceptions.ConnectionError Falls keine Verbindung aufgebaut werden kann
 '''
-def fetchAPIGames() -> json:
+def fetchAPIGames() -> Spiel:
 	try:
 		gamesRequest = requests.get(f"{API_SERVER_DOMAIN}/game", verify=False)#Lese lisste aller Spiele aus
 		games = (gamesRequest.text).strip() #Aufräumen des Response
@@ -313,7 +313,12 @@ def fetchAPIGames() -> json:
 			logger.warning('Es konnten keine Spiele gefeched werden, da bisher keine erstellt wurden')
 			return None
 		else:
-			return json.loads(gamesRequest.text) #Gebe Daten als json zurück
+			spieleJSON:json = json.loads(gamesRequest.text)
+			spiele = [] #Speichert alle Spiele als Spiel objekte in Liste
+
+			for spiel in spieleJSON:
+				spiele.append(createSpiel(spiel))
+			return spiele #Gebe Liste aller Spiele zurück
 	except requests.exceptions.ConnectionError:
 		logger.critical('Es Konnte keine Verbindung zur API aufgebaut werden!')
 		return None
@@ -321,90 +326,56 @@ def fetchAPIGames() -> json:
 
 
 '''
-Ermittelt das aktuellste laufende Spiel.
-@return Das Spiel Objekt des aktuellsten laufenden Spiels
-@return None, bei Verbdingungsproblemen, oder falls noch kein Spiel exestiert
-'''
-def fetchCurrentGame() -> Spiel:
-	js = fetchAPIGames() #Feche einmal alle Spiele als JSON von der API
-	if(js != None):
-		curGameJSON = fetchCurrentGameJson(js)#Ermittle die JSON des aktuellen Spiels
-		while(curGameJSON == -1):#Wenn ne ungültige uid gefunden und gelöscht wurde nochmal anfragen
-			curGameJSON = fetchCurrentGameJson(fetchAPIGames())
-
-		if(curGameJSON != None):					
-			aktuellesSpiel = createSpiel(curGameJSON)
-			return aktuellesSpiel
-		else:
-			logger.error("Es konnte kein aktives Spiel ermittelt werden")
-			#KA muss ich mir noch überlgen was sinvoll ist
-			return None
-	else: #Es Gab Probleme beim Fechen der Games
-		#KA muss ich mir noch überlgen was sinvoll ist
-		return None
-
-
-'''
-Ermittelt die UID des aktuellsten Spiels
-@return UID als Integer
-@return None bei Problemen
-'''
-def fetchCurrentGamesUID() -> int:
-	aktuellesSpiel = fetchCurrentGame()
-	if(aktuellesSpiel != None):
-		return int(aktuellesSpiel.uid)
-	else:
-		return None
-
-'''
 Hilfsmethode. Sendet einen wurf mit gegebenen Werten an die API. Und aktualisiert bei Erfolg den aktuellen Spieler
 @param uid. Die UID des Spiels an welches der Wurf übermittlet werden soll
 @param modifier. Der Wurf Modifier
 @param value. Der Wert des Wurfs 
-@return der Status Code des Requests
+@return der Status Code des Requests, sowie die Textmeldung/json im Response
 @return None, falls eine Verbindung nicht möglich war
 '''
-def pushThrowToAPI(uid:int, modifier: int, value: int) -> int:
+def pushThrowToAPI(uid:int, modifier: int, value: int) -> [int, json]:
 	try:
 		reqURL = f"{API_SERVER_DOMAIN}/game/{str(uid)}/throw/{str(value)}/{str(modifier)}"
 		req = requests.post(reqURL, verify=False)
-		#if req.status_code == 200:#Erfolgreich übertragen + wird nur ausgeführt wenn ich auch wirklich werfen durfte
-		#	gameResponse:json = json.loads(req.text)
-		#	spiel:Spiel = createSpiel(gameResponse)
-		#	player:Spieler = createAktiveSpieler(spiel)
-		#	setPlayer(player)
-		return req.status_code
+		return [req.status_code, json.loads(req.text)]
 	except requests.exceptions.ConnectionError:
 		logger.critical(f'Es Konnte keine Verbindung zur API aufgebaut werden. Der wurf: {modifier},{value} konnte nicht übertragen werden')
 		return None
+	except json.JSONDecodeError:
+		return [req.status_code, None]
 	return
 
 #---------- LOKALE Getter/Setter-------------------
 
 
+'''
+Gibt die zulezt gespeicherten Spielinformationen
+@Die neusten Spielinformationen
+'''
+def getGame() -> Spiel:
+	global SPIEL, SPIEL_LOCK
+	SPIEL_LOCK.acquire()
+	temp:Spiel = SPIEL
+	SPIEL_LOCK.release()
+	return temp
+
 
 '''
-Gibt die Spielinformationen vom lezten Fetch zurück
-@Das Spiel aus dem lezten Fetch
+Sezt die neusten Spielinformationen
+@Die infos des neusten Spiels
 '''
-def getPreviousGame() -> Spiel:
-	global PREVIOUS_SPIEL, PREVIOUS_SPIEL_LOCK
-	PREVIOUS_SPIEL_LOCK.acquire()
-	prevspiel:Spiel = PREVIOUS_SPIEL
-	PREVIOUS_SPIEL_LOCK.release()
-	return prevspiel
-
-
-'''
-Gibt die Spielinformationen vom lezten Fetch zurück
-@Das Spiel aus dem lezten Fetch
-'''
-def setPreviousGame(prevSpiel:Spiel) -> Spiel:
-	global PREVIOUS_SPIEL, PREVIOUS_SPIEL_LOCK
-	PREVIOUS_SPIEL_LOCK.acquire()
-	PREVIOUS_SPIEL = prevSpiel
-	PREVIOUS_SPIEL_LOCK.release()
+def setGame(spielUpdate:Spiel) -> Spiel:
+	global SPIEL, SPIEL_LOCK
+	SPIEL_LOCK.acquire()
+	SPIEL = spielUpdate
+	SPIEL_LOCK.release()
 	return
+
+
+
+
+
+
 
 
 '''
@@ -500,11 +471,8 @@ Gibt die Gespeicherte UID des laufenden SPIELS zurück
 @return None Falls aktuell kein SPiel läuft, oder andere Probleme vorliegen
 '''
 def getUID() -> int:
-	global CURRENT_GAME_UID, CURRENT_GAME_UID_LOCK
-	CURRENT_GAME_UID_LOCK.acquire()
-	uid = CURRENT_GAME_UID
-	CURRENT_GAME_UID_LOCK.release()
-	return uid
+	global LOCAL_GAME_UID
+	return LOCAL_GAME_UID
 
 
 '''
@@ -512,24 +480,32 @@ Setzt die UID des aktuellen Spiels
 @param int uid, der neu zu setzende Wert
 '''
 def setUID(uid: int):
-	global CURRENT_GAME_UID, CURRENT_GAME_UID_LOCK
-	CURRENT_GAME_UID_LOCK.acquire()
-	CURRENT_GAME_UID = uid
-	CURRENT_GAME_UID_LOCK.release()
+	global LOCAL_GAME_UID
+	LOCAL_GAME_UID = uid
 	logger.debug(f"Neue UID gesezt: {uid}")
 	return
 
 
 '''
-Aktualisiert den Score des Spielers lokal (nur für ausgabe wichtig)
+Gibt die Gespeicherte UID des Spielers zurück
+@return int Die UID des lokalen Spielers
+@return None Falls aktuell nocj kein Spieler festgelegt wurde
 '''
-def updatePlayerScore(score: int):
-	global LOKAL_PLAYER, LOKAL_PLAYER_LOCK
-	LOKAL_PLAYER_LOCK.acquire()
-	if LOKAL_PLAYER != None:
-		LOKAL_PLAYER.score['Score'] = score
-	LOKAL_PLAYER_LOCK.release()
+def getLocalPlayerUID() -> int:
+	global LOCAL_PLAYER_UID
+	return LOCAL_PLAYER_UID
+
+
+'''
+Setzt die UID des lokalen Spielers
+@param int uid, der neu zu setzende Wert
+'''
+def setLocalPlayerUID(uid: int):
+	global LOCAL_PLAYER_UID
+	LOCAL_PLAYER_UID = uid
+	logger.debug(f"Neue Spieler-UID gesezt: {uid}")
 	return
+
 
 #-----------------------------
 
@@ -625,7 +601,7 @@ def createPlayer(spiel: Spiel, arrayID:int) -> Spieler:
 
 '''
 Erzeugt aus einem Spiel objekt ein Spieler objekt des Akiven Spielers
-@param spiel Das Spiel aus dem der Aktive Spielerr erzuegt werden soll
+@param spiel Das Spiel aus dem der Aktive Spieler erzeugt werden soll
 @return Spieler das Spielerobjekt
 '''
 def createAktiveSpieler(spiel: Spiel) -> Spieler:
@@ -648,6 +624,22 @@ def getPlayerScore(player: Spieler) -> int:
 
 #-----------------------------
 
+'''
+Hilfsmethode
+Gibt basierend auf einen Eingabestate Wurfstate den nächsten aus
+@return der nächste Wurfstate als string
+@return None, wenn der gegebene Eingabestate kein wurfstate war
+'''
+def getNextThrowState(wurfState:str) -> str:
+	if wurfState == 'THROW_1':
+		return 'THROW_2'
+	if wurfState == 'THROW_2':
+		return 'THROW_3'
+
+	if wurfState == 'THROW_3':
+		return 'OTHER_PLAYER'
+	return None #Kein gültiger eingangs Status -> None
+
 
 '''
 Sendet einen Wurf an die API
@@ -656,119 +648,71 @@ Sendet einen Wurf an die API
 '''
 def sendThrow(modifier: int, value: int):
 	state:str = getState() #Holt sich den aktuellen Gamestate
-	if state == 'NG': #Wir wissen noch nicht in welchem Spiel wir überhaupt sind
-		logger.critical("Ein gültiger Wurf wurde festgestellt, konnte aber nicht übertragen werden, da für das aktuelle Spiel noch keine UID ermittelt werden konnte")
+	if state == 'INIT':#passiert nix
+		logger.warning("Der Wurf wird verworfen, da noch keinem Spiel beigetreten wurde")
 		return
-	else: #Wir wissen in welchem Spiel wir sind aka, wir haben auch ne gültige uid
+
+	if state == 'THROW_1' or state == 'THROW_2' or state == 'THROW_3':
 		uid:int = getUID()
-		aktuellesSpiel:Spiel = fetchUIDGame(uid)
-		aktivePlayerArrID:int = aktuellesSpiel.ActivePlayer#Speichert die Array ID des aktiv Players
-		aktivePlayer:Spieler = createAktiveSpieler(aktuellesSpiel)
-		if state == 'INIT':
-			if aktuellesSpiel.ThrowRound == 1: #Runde 1 aka Spiel erste Runde
-				if aktivePlayer.totalThrowCount == 0: #Es wurde noch nicht geworfen -> Wir sind der erste
-					statusCode:int = pushThrowToAPI(uid, modifier, value)
-					if statusCode != None:
-						if statusCode == 200: #Keine Probleme, Übertragung hat funktioniert
-							setPlayer(aktivePlayer) #-> Wir sind nun der Aktive Spieler
-							setState('THROW_2')
-							oldScore:int = getPlayerScore(aktivePlayer)
-							updatePlayerScore(oldScore - (modifier*value))
-							logger.info(f"Ihr erster Wurf wurde erfolgreich übertragen. Sie sind jetzt Spieler: {aktivePlayer.name}, mit UID: {aktivePlayer.uid}")
-							return
-						elif statusCode == 400: #Dürfte hier nicht errreicht werden können (kann nur heißen das der Spieler aus irgendnem grund schon 3 Würfe hatte -> scheinabr ein großes synchronisations problem)
-							logger.error(f'Ihr Wurf konnte nicht übertragen werden. State: {state}, ResponseCode: {statusCode}')
-							return
-						elif statusCode == 404: #Dürfte auch nicht eintreten, außer in der API ist was kapuut oder synch. issue
-							logger.critical(f"Ihr erster Wurf: {modifier},{value}, konnte nicht übertragen werden, da das Spiel mit der UID: {uid}, nicht gefunden werden konnte")
-							return
-						else: #Unbekannter Fehler -> Ausgeben
-							logger.critical(f"Beim Übertragen des Wurfs ist ein unbekannter Fehler aufgetreten. Response Code: {statusCode}")
-							return
-					else: #Nichts ändern, Fehlermeldung wurde bereits woanders (pushThrowToAPI()) ausgegeben
-						return
-				else: #Der andere Spieler hat schon geworfen -> Ungültiger wurf
-					setState('OTHER_PLAYER')
-					localPlayerArrID:int = 1 if aktivePlayerArrID==0 else 0#Die Eigene Id ist die entgegengesezte des Aktiven Spielers
-					setPlayer(createPlayer(aktuellesSpiel, ))
-					logger.info(f"Der andere Spieler hat zu erst geworfen. Ihr Wurf wird verworfen. Lokaler Spieler: ID{p2.uid}, Name:{p2.name}")
+		statusCode, jsonResponse = pushThrowToAPI(uid, modifier, value)#Schickt den Wurf an die API		
+		if statusCode != None: #Keine Verbindungsprobleme, bei Problemen wird Fehler woanders ausgegeben
+			if statusCode == 200: #Keine Probleme, Übertragung hat funktioniert
+				newState:str = getNextThrowState(state) #Placeholder
+				if newState == None:#Tritt nur ein wenn ein ungültiger State vorlag (kann eigentlich nicht hier eintreten, außer race condition)
 					return
-			else: #Wir befinden uns in einer Höheren Spielrunde (aber INIT State) -> wir sind nem Spiel nachgejoined
-				'''
+				if newState == 'OTHER_PLAYER':
+					if not requestPlayerChange():#Führe Spielerwechsel aus: Wenn aus irgendnem grund nicht möglich
+						return #Keine Veränderung vornehmen Fehler wird schon in requestPlayerChange() ausgegeben
 
-				TODO:
-					Implement
-
-
-				'''
-				logger.critical("ACHTUNG DAS SPIEL WURD IN EINER HÖHEREN SPIELRUNDE BEGONNEN. DIES IST AKTUELL NOCH NICHT UMGESEZT")
+				setState(newState) #Neuen State entsprechend setzen
+				spielUpdate:Spiel = createSpiel(jsonResponse)#Json Response enthielt die neuen geänderten Daten vom Spiel
+				setGame(spielUpdate)#Aktualisiert das lokale Spiel
+				setPlayer(createAktiveSpieler(spielUpdate))#Aktualisiert das lokale Spielerobjekt
+				logger.info(f'({getPlayer().name}) - Wurf: {modifier},{value} - Neuer Score: {getPlayerScore(getPlayer())}')
 				return
-						
 
-
-		if state == 'THROW_1' or state == 'THROW_2' or state == 'THROW_3':
-			statusCode:int = pushThrowToAPI(uid, modifier, value)
-			if statusCode != None:
-				if statusCode == 200: #Keine Probleme, Übertragung hat funktioniert
-					newState = None #Placeholder
-					if state == 'THROW_1':
-						newState = 'THROW_2'
-					elif state == 'THROW_2':
-						newState = 'THROW_3'
-					else: #Das war der 3te Wurf -> Spielerwechsel
-						if requestPlayerChange(): #Spielerwechsel Erfolgreich -> Änderung kann übernommen werden
-							newState = 'OTHER_PLAYER'
-						else: #Spielerwechsel aus irgendnem grund nicht möglich
-							return #Keine Veränderung vornehmen, scheinbar nen sync issue
+			elif statusCode == 400:#Entweder hatte der Spieler schon 3 Würfe, oder er hat zu wenig Restpunkte für den Wurf-> Fehlurf
+				localPlayer:Spieler = getPlayer()
+				score:int = getPlayerScore(localPlayer)
+				wurf:int = int(modifier*value)
+				print(wurf)
+				if score < wurf: #Spieler hat nichtmehr genug punkte für den Wurf
+					newState:str = getNextThrowState(state) #Placeholder
+					if newState == None:#Tritt nur ein wenn ein ungültiger State vorlag (kann eigentlich nicht hier eintreten, außer race condition)
+						return
+					if newState == 'OTHER_PLAYER':
+						if not requestPlayerChange():#Führe Spielerwechsel aus: Wenn aus irgendnem grund nicht möglich
+							return #Keine Veränderung vornehmen Fehler wird schon in requestPlayerChange() ausgegeben
 					setState(newState) #Neuen State entsprechend setzen
-					oldScore:int = getPlayerScore(aktivePlayer)
-					updatePlayerScore(oldScore - (modifier*value))
-					logger.info(f'({getPlayer().name}) - Wurf: {modifier},{value}')
+					if jsonResponse != None:
+						spielUpdate:Spiel = createSpiel(jsonResponse)#Json Response enthielt die neuen geänderten Daten vom Spiel
+						setGame(spielUpdate)#Aktualisiert das lokale Spiel
+					logger.info(f"{localPlayer.name} - Ihr Rest-Score({score}) ist zu niedrig für ihren Wurf({wurf}). Werte Wurf als Fehlwurf")
 					return
-
-				elif statusCode == 400:#Entweder hatte der Spieler schon 3 Würfe, oder er hat zu wenig Restpunkte für den Wurf-> Fehlurf
-					localPlayer:Spieler = getPlayer()
-					score:int = getPlayerScore(localPlayer)
-					wurf:int = int(modifier*value)
-					if score < wurf: #Spieler hat nichtmehr genug punkte für den Wurf
-						if state == 'THROW_1':
-							newState = 'THROW_2'
-						elif state == 'THROW_2':
-							newState = 'THROW_3'
-						else: #Das war der 3te Wurf -> Spielerwechsel
-							if requestPlayerChange(): #Spielerwechsel Erfolgreich -> Änderung kann übernommen werden
-								newState = 'OTHER_PLAYER'
-							else: #Spielerwechsel aus irgendnem grund nicht möglich
-								return #Keine Veränderung vornehmen, scheinbar nen sync issue
-						setState(newState) #Neuen State entsprechend setzen
-						logger.info(f"{player.name} - Ihr Rest-Score({score}) ist zu niedrig für ihren Wurf({wurf}). Werte Wurf als Fehlwurf")
-						return
-					else: #Spieler hatte scheinabr schon 3 Würfe -> Spielerwechsel anfragen + state setzen (um sync issue zu beheben)
-						if requestPlayerChange(): #Spielerwechsel Erfolgreich -> Änderung kann übernommen werden
-							setState('OTHER_PLAYER') #Neuen State entsprechend setzen
-							return
-						else: #Spielerwechsel aus irgendnem grund nicht möglich
-							return #Keine Veränderung vornehmen, scheinbar nen sync issue
-				
-				elif wurfStatusCode == 404: #Dürfte auch nicht eintreten, außer in der API ist was kapput oder sync. issue
-					logger.critical(f"{localPlayer.name} - Ihr Wurf: {modifier},{value}, konnte nicht übertragen werden, da das Spiel mit der UID: {uid}, nicht gefunden werden konnte")
+				else: #Spieler hatte scheinabr schon 3 Würfe -> Spielerwechsel anfragen + state setzen (um sync issue zu beheben)
+					if not requestPlayerChange():#Führe Spielerwechsel aus: Wenn aus irgendnem grund nicht möglich
+						return #Keine Veränderung vornehmen Fehler wird schon in requestPlayerChange() ausgegeben
+					setState('OTHER_PLAYER') #Neuen State entsprechend setzen
+					logger.info(f'Sie hatten bereits 3 Würfe. Wechsel Spieler')
 					return
-				else: #Unbekannter Fehler -> Ausgeben
-					logger.critical(f"Beim Übertragen des Wurfs ist ein unbekannter Fehler aufgetreten. Response Code: {wurfStatusCode}")
-					return
-			else: #Nichts ändern, Fehlermeldung wurde bereits woanders (pushThrowToAPI()) ausgegeben
+			elif wurfStatusCode == 404: #Dürfte auch nicht eintreten, außer das Spiel wurde während des Spielablaufs gelöscht
+				logger.critical(f"{localPlayer.name} - Ihr Wurf: {modifier},{value}, konnte nicht übertragen werden, da das Spiel mit der UID: {uid}, nicht gefunden werden konnte. (Wurde vermutlich gelöscht/beendet)")
 				return
-
-
+			else: #Unbekannter Fehler -> Ausgeben
+				logger.critical(f"Beim Übertragen des Wurfs ist ein unbekannter Fehler aufgetreten. Response Code: {wurfStatusCode}:{json.dumps(jsonResponse)}")
+				return
 
 		if state == 'OTHER_PLAYER':
 			logger.warning(f"Es wurde ein Wurf festgestellt, aber der andere Spieler ist dran. Verwerfe Wurf")
 			return
 
 
-
 		if state == 'UEBERTRITT':
-			logger.warning(f"Es wurde ein Wurf festgestellt, aber der andere Spieler ist dran. Verwerfe Wurf")
+			logger.warning(f"Es wurde ein Wurf festgestellt, da sie aber übertreten haben, wird dieser verworfen")
+			return
+
+		if state == 'WIN':
+			logger.warning(f"Es wurde ein Wurf festgestellt. Aber das Spiel ist bereits abgeschlossen. Verwerfe Wurf")
 			return
 
 
@@ -839,83 +783,48 @@ def arduinoSerialReceiver():
 
 
 '''
-Erhält ein Spiel, und prüft ob sich der Interne Zustand, vom aktuellen unterscheidet. Und wenn ja ändert entsprechend
-@param latesGame das Spiel gegen welches geprüft werden soll 
+Erhält ein Spiel, und prüft ob sich der Interne Zustand, vom aktuellen unterscheidet. Und wenn ja ändert entsprechend (z.B. durch Frontend eingaben)
+@param latestGame das Spiel gegen welches geprüft werden soll 
 '''
 def checkGameStateChanges(latestGame: Spiel):
+
+	# Prüfe ob spiel vorbei ist
+	if latestGame.GameState == 'WON':# Spiel wurde beendet
+		p1:Spieler = createPlayer(latestGame, 0)
+		setState('WIN')
+		sieger:Spieler = p1
+		
+		if getPlayerScore(p1) > 0:#Spieler 2 hat gewonnen
+			sieger = createPlayer(latestGame, 1)
+		if sieger.uid == getLocalPlayerUID(): #Wir haben gewonnen
+			showWin() #Führe Die Sieges Methode aus
+		else:#Gegner hat gewonnen
+			showLoose()#Führe Die Niederlage Methode aus
+		return
+
 	curState:str = getState()
-	curUid:int = getUID()
-	if(latestGame != None):
-		if int(latestGame.uid) != curUid: #SpielUid hat sich geändert -> Neues Spiel wurde erstellt
-			setUID(int(latestGame.uid)) #Setze die UID neu
-			setState('INIT')
-			setPlayer(None)#Aktueller lokaler Spieler unbekannt
-			setPreviousGame(None)
-			logger.critical(f"Der Gamestatechange hat ein neues Spieler erkannt. Setze aktuelles zurück, und wechsel Spiel")
+	curGame:Spiel = getGame()
+	curUID:int = getUID()
+
+	if(latestGame != None and curState != 'WIN' and curState != 'INIT'):#Wenn das Spiel beendet worde machts keinen Sinn weiter auf Unterschiede zu prüfen, selbes gilt für wenns noch nicht gestarted wurde
+		calcedGamestate: int = calcGameState(latestGame, getLocalPlayerUID())
+
+		if latestGame.GameState == 'NEXTPLAYER' or latestGame.GameState == 'BUSTCONDITION' or latestGame.GameState == 'BUST':# and calcedGamestate == 'OTHER_PLAYER' and calcedGamestate == curState: #Spielerwechsel nach API erforderlich
+			requestPlayerChange()
 			return
 
-
-		#Prüfe ob die zurückgegebenen Daten den aktuellen Zustand korrelieren
-		#Prüfen ob der aktuelle Wurf passt, 
-		#prüfen ob nicht doch anderer Spieler dran ist
-		aktPlayer:Spieler = createAktiveSpieler(latestGame) #Bestimmt den aktuellen Spieler des letzten fetches
-		aktivSpielerArrID:int = latestGame.ActivePlayer
-		localPlayer:Spieler = getPlayer() #Bestimmte den lokalen Spieler
-		if localPlayer != None: #Lokaler Spieler wurde bereits identifiziert
-			if aktPlayer.uid != localPlayer.uid:#Der Aktuelle Spieler ist nicht der Aktive
-				if curState == 'THROW_1' or curState == 'THROW_2' or curState == 'THROW_3': #ABER Der lokale Spieler ist in neinem Nicht gültigen lokalen Spielzustand
-					setState('OTHER_PLAYER')#Ändere den Zustand
-					logger.warning(f"ZUSTANDS Fehler festgestellt! Aktiver Spieler({aktPlayer.uid}) sind nicht wir({localPlayer.uid}), ändere Lokalen Zustand. Zustand Vorher: {curState}.")
-					return
-			else: #Lokaler Spieler ist Aktiver Spieler
-				if curState == 'OTHER_PLAYER':#Aber wir befinden uns im Flaschen Zustand
-					newState = curState
-					rundenWuerfe:int = len(aktPlayer.lastThrows)
-					if rundenWuerfe == 0:
-						newState = 'THROW_1'
-					elif rundenWuerfe == 1:
-						newState = 'THROW_2'
-					elif rundenWuerfe == 2:
-						newState = 'THROW_3'
-					else: #Anderer Spieler muss abgegeben haben (eigene Würfe wurden noch nicht zurückgesezt) -> kann nur erst wurf sein
-						#Prüfen ob anderer Spieler abgegeben hat
-						newState = 'THROW_1'
-					setState(newState)#Ändere den Zustand
-					logger.warning(f"ZUSTANDS Fehler festgestellt! Wir sind der aktive Spieler, ändere Lokalen Zustand in: {newState}. Zustand Vorher: {curState}.")
-					return
+		if(calcedGamestate != curState):#Irgendeine Diskrepanz liegt vor
+			logger.warning(f"Diskrepanz Erkannt: Berechneter Zustand: {calcedGamestate}. Akttueller Zustand: {curState}. Nehme Änderun vor")
+			setState(calcedGamestate)
+			return
+		else:
+			return
 
 		#------------------ Elementar fehler behoben (aka resynced) --------------
 
-		if curState == 'INIT':
-			#Init -> Throw Round==1, len(player)==2, player[0].TotalThrowCount == 0, player[1].TotalThrowCount == 0
-			if latestGame.ThrowRound == 1: #Runde 1 aka Spiel erste Runde
-				if aktPlayer.totalThrowCount == 0:#Kein Spieler hat bisher geworfen -> warten
-					return#Lokaler Spieler kann noch nicht bestimmt werden
-				else: #Aktive Spieler hat bereits würfe gemacht
-					if localPlayer != None: #Der Lokale Spieler wurde bereits bestimmt
-						return#Keine Änderung Nötig
-					else: #Der lokale Spieler wurde nicht bestimmt, aber aktiv hat würfe -> wir sind der ander Spieler
-						localArrID:int = 1 if aktivSpielerArrID==0 else 0#Ist das Gegenteil der Akt. Spieler ID
-						localPlayer = createPlayer(latestGame, localArrID)
-						setPlayer(localPlayer)
-						setState('OTHER_PLAYER')
-						logger.info(f"Der andere Spieler hat zu erst geworfen. Lokaler Spieler: ID{localPlayer.uid}, Name:{localPlayer.name}")
-						return
-			else: #Wir sind bereits in einer höheren Runde (aber immer noch Init aka nachgejoined)
-				'''
-
-					TODO: Implement
-
-
-
-				'''
-				logger.critical("WIR SIND IN EINER HÖHEREN RUNDE NACHGEJOINED. DIES KANN AKTUELL NOCH NICHT BEHANDELT WERDEN")
-				return
-
-
 
 		if curState == 'UEBERTRITT': 
-			if localPlayer != None:
+			if localPlayer != None:#Sollte eigentlich immer der Fall sein
 				if aktPlayer.uid == localPlayer.uid: #Aktiver Spieler sind wir (aber wir haben übertreten)
 					if getPreviousState() == 'OTHER_PLAYER': #Anderer Spieler war vorher dran, aber ist nun fertig und wir sind noch im übertritt
 						setPreviousState('THROW_1')
@@ -930,22 +839,34 @@ def checkGameStateChanges(latestGame: Spiel):
 
 
 
-		if curState == 'THROW_1' or curState == 'THROW_2' or curState == 'THROW_3': #Wir sind dran und warten auf Wurf
-			return;
+		#if curState == 'THROW_1' or curState == 'THROW_2' or curState == 'THROW_3': #Wir sind dran und können Werfen
+			#rundenWuerfe:int = len(aktPlayer.lastThrows) #Die anzahl an bisherigen Würfen des Aktiven Spielrs für die aktuelle Runde
+			#newState = None
+			#match rundenWuerfe:
+				#case 0: 
+					#newState = 'THROW_1'
+				#case 1: 
+					#newState = 'THROW_2'
+				#case 2: 
+					#newState = 'THROW_3'
+				#case 3: #Wir hatten alle Würfe, haben aber noch nicht gewechselt
+					#newState = 'OTHER_PLAYER'
+			#if newState != curState: #Wenn eine Diskrpanz zwischen den Gespeicherten Würfen und den Loaklem Wurfstate vorliegt
+				#setState(newState)#Ändere den Zustand
+				#logger.warning(f"Externes Update: Diskrepanz bei den Würfen festgestellt: {newState}. Zustand Vorher: {curState}.")
+			#return;
+#
+#
+		#if curState == 'OTHER_PLAYER':
+			#if aktPlayer.uid == localPlayer.uid: #Aktiver Spieler sind wieder wir (aka anderer Spieler ist fertig) -> Spielerwechsel hat stattgefunden
+				#setState('THROW_1')#Wechsel Zustand
+				#logger.info(f"Der andere Spieler ist fertig. Nun bitte werfen")
+				#return
+			#else: #Der andere Spieler ist noch nicht fertig -> warten
+				#return
 
 
 
-		if curState == 'OTHER_PLAYER':
-			if localPlayer != None:
-				if aktPlayer.uid == localPlayer.uid: #Aktiver Spieler sind wieder wir (aka anderer Spieler ist fertig)
-					setState('THROW_1')#Wechsel Zustand
-					logger.info(f"Der andere Spieler ist fertig. Nun bitte werfen")
-					return
-				else: #Der andere Spieler ist noch nicht fertig -> warten
-					return
-			else:#Wir wissen nichtmal wer wir sind, wissen aber aus irgendnem grund, das der andere Dran sit (darf nicht passieren)
-				logger.warning("Der Andere Spieler sit dran, aber lokaler Spieler konnte nicht bestimmt werden [SOLLTE SO NICHT EINTRETTEN KÖNNEN]")
-				return
 
 #-----------------------------
 
@@ -965,31 +886,10 @@ def showGame():
 	return
 
 
-'''
-Prüft periodisch (CHECK_GLOBAL_GAME_INTERVAL) was das Spiel mit höchster UID (neustes aktives Spiel) ist,
-und sezt fall neu die loakle uid + player sowie den gamestate entsprechend (wird dann von )
-'''
-def checkForNewGame():
-	global CHECK_GLOBAL_GAME_INTERVAL
-	while True:
-		fetchedUID = fetchCurrentGamesUID()
-		fetchedUID:int = int(fetchedUID) if fetchedUID is not None else None
-		if fetchedUID != None:
-			if fetchedUID != getUID(): #neues spiel wurde erstellt (vermutlich)
-				setUID(fetchedUID)
-				setPlayer(None)
-				setState('INIT')
-				setPreviousGame(None)
-		time.sleep(CHECK_GLOBAL_GAME_INTERVAL)
-	return
-
-
-
-
 
 '''
 Prüft automatisch alle X Sekunden, ob es für das aktuelle Spiel (aka aktuelle UID),
-updates gibt.
+updates gibt. (z.b. durchs Frontend hervorgerufen)
 
 Wenn wir der aktuelle Spieler sind, prüft alle CHECK_GAME_UPDATE_INTERVAL_MAX Sekunden
 Wenn State==Init, oder der andere Spieler dran -> CHECK_GAME_UPDATE_INTERVAL_MIN sekunden prüfen
@@ -999,21 +899,15 @@ def fetchGameUpdates():
 	updateInterval:int = 1
 	while True:
 		curState:str = getState()
-		if(curState != 'NG'):
-			if curState == 'INIT' or curState == 'OTHER_PLAYER' or curState == 'UEBERTRITT':
-				updateInterval = CHECK_GAME_UPDATE_INTERVAL_MIN
-			else:
-				updateInterval = CHECK_GAME_UPDATE_INTERVAL_MAX
-			uid = getUID()
-
-			if uid != None:	
-				spiel_update:Spiel = fetchUIDGame(uid)
-				checkGameStateChanges(spiel_update) #Prüfe auf neuerungen und wende an falls nötig
-				setPreviousGame(spiel_update) #Setze das vorherige Spiel entsprechend
-		else: #Es wurde noch keine UID ermittelt, aka kann auch nicht das Spiel prüfen
+		prevState:str = getPreviousState()
+		if curState == 'OTHER_PLAYER' or (curState == 'UEBERTRITT' and prevState == 'OTHER_PLAYER'): #Wenn der andere Spieler dran ist besonders oft Prüfen, um mitzubekommen wann wir dran sind
 			updateInterval = CHECK_GAME_UPDATE_INTERVAL_MIN
-			logger.warning("Es kann noch kein Spiel update gefetched werden, da noch keine UID fürs aktuelle Spiel ermittelt wurde")
-
+		else:
+			updateInterval = CHECK_GAME_UPDATE_INTERVAL_MAX
+		newestUpdate:Spiel = fetchUIDGame(getUID())
+		if newestUpdate != None:
+			checkGameStateChanges(newestUpdate) #Prüfe auf neuerungen und wende an falls nötig
+			setGame(newestUpdate) #Update das lokale Spiel entsprechend mit den neusten Daten
 		time.sleep(updateInterval)
 	return
 
@@ -1021,41 +915,164 @@ def fetchGameUpdates():
 
 #-----------------------------
 
+'''
+Gibt basierend auf einem Spiel und einer user Id
+den Sinvollsten gamestate für den Nutzer zurück
+@return State der Passenste Zustand für den Nutzer
+@return None, wenn der Nutzer nicht im Spiel ist
+'''
+def calcGameState(spiel:Spiel, uID:int):
+	#INIT und UEBERTRITT sind nicht bestimmbar (macht aber auch keinen Sinn hier)
+	if spiel.GameState == 'WON':# Spiel wurde beendet
+		return 'WIN'
+	spieler:Spieler = getPlayerUID(spiel, uID)
+	aktSpieler:Spieler = createAktiveSpieler(spiel)
 
-def main():
-	global serial_conn
+	if spieler != None:
+		rundenWuerfe:int = len(aktSpieler.lastThrows) #Die anzahl an bisherigen Würfen des Aktiven Spielers für die aktuelle Runde
+		if aktSpieler.uid == spieler.uid:#Der Spieler ist der aktive Spieler
+			match rundenWuerfe:
+				case 0: 
+					return 'THROW_1'
+				case 1: 
+					return 'THROW_2'
+				case 2: 
+					return 'THROW_3'
+			if spiel.GameState != 'NEXTPLAYER':# Wir sind noch nicht im 3ten wurf und aktiv, Aber haben 3 Würfe eingetragen -> wurden noch nicht gewiped aka gerade erst akt geworden
+				return 'THROW_1'
+			else:#Speielrwechsel erforderlich
+				return 'OTHER_PLAYER' 
+		else:#Spieler ist inaktiver Spieler
+			if spiel.GameState == 'NEXTPLAYER': #Anderer Spieler ist fertig
+				return 'THROW_1'
+			else:
+				return 'OTHER_PLAYER';
+	else:
+		return None
 
-	while True:
-		logger.info('Starte OnOffDart-Service')
-		#Einstellungen für die Serielle Verbindung zum Arduino
-		serial_conn.baudrate = BAUD_RATE
-		serial_conn.port = ARDUINO_PORT
-		serial.timeout = SERIAL_TIMEOUT
-		if checkConnectionsSetup():
 
-			#TODO implementiere Neustartmechanismus wenn api verbindung abbricht
-			newGameChecker_Thread = threading.Thread(target=checkForNewGame)#Prüft ob ein neues Spiel erstellt wurde
-			newGameChecker_Thread.start()
-			curGameUpdateCheckker_Thread = threading.Thread(target=fetchGameUpdates)#Prüft ob das aktuelle Spiel updates hat
-			curGameUpdateCheckker_Thread.start()
 
-			showGame_Thread = threading.Thread(target=showGame)#Gibt Regelmässig aktuelle Werte fürs Spiel aus
-			showGame_Thread.start()
+
+'''
+Gibt von einem Gegebene Spiel das Spielerobjekt mit gegebener UID zurück
+@param game Das Spiel in welchem nach dem Spieler gescuht werden soll
+@param playerUid die UID des Spielers
+@return das Spielerobjekt
+@return None wenn der Spieler mit der UID im Spiel nicht exestiert
+'''
+def getPlayerUID(game:Spiel, playerUID:int) -> Spieler:
+	if game != None and playerUID != None:
+		p1:Spieler = createPlayer(game, 0)
+		p2:Spieler = createPlayer(game, 1)
+		if p1.uid == playerUID:
+			return p1
+		elif p2.uid == playerUID:
+			return p2
+
+	return None #Wenn kein gültiges Format, oder spielerUid nicht im Spiel
+
+'''
+Gibt auf dem LCD eine liste der aktuellen Spiele aus, von denen der Nutzer wählen kann
+Gibt danach die beide nSpieler aus, von denen er sich wählt
+Sezt die beiden gloablen variablen entsprechend, und returned -> return lässt das Program starten
+'''
+def userInit():
+	if checkApiConnection():
+		games = None
+		
+		while games == None:
+			games = fetchAPIGames()
+			time.sleep(1)
+		print("Welches Spiel: ")
+		s = ""
+		for spiel in games:
+			s = s + spiel.uid + " | "
+		print(s)
+		uid = int(input(""))
+		setUID(uid)
+		curGame:Spiel = fetchUIDGame(getUID())
+		p1:Spieler = createPlayer(curGame, 0)
+		p2:Spieler = createPlayer(curGame, 1)
+		print("Welche UID: ")
+		print(f"{p1.uid}: {p1.name}")
+		print(f"{p2.uid}: {p2.name}")
+		pUID = int(input(""))
+
+
+		#Erste initialisierung aller variablen, aktuellen Spielzustand bestimmen anhand der Daten
+		
+		state:str = calcGameState(curGame, pUID)
 		
 
-			arduCom_Thread = threading.Thread(target=arduinoSerialReceiver)
-			arduCom_Thread.start()
-			while True:
+		curPlayer: Spieler = getPlayerUID(curGame, pUID)
+
+		setGame(curGame)
+		setLocalPlayerUID(pUID)
+		setPlayer(curPlayer)
+		setState(state)
+
+	else:
+		os._exit() #Beende erstmal wenn die API nicht erreicht werden kann
+	
+	'''
+	#TODO:
+		Implement, return aktuell direkt nach userinput von der console, wird später über lcd und buttons gemacht
+	'''
+
+
+	return
+
+
+'''
+Beendet alle verbindungen und Threads
+'''
+def stopSystem():
+	'''
+	#TODO:
+		Implement, returend aktuell sofort
+	'''
+
+	return
+
+'''
+Setzt das System auf/zurück
+'''
+def startSystem():
+	global serial_conn
+	logger.info('Starte OnOffDart-Service')
+	serial_conn.baudrate = BAUD_RATE
+	serial_conn.port = ARDUINO_PORT
+	serial.timeout = SERIAL_TIMEOUT
+	if checkConnectionsSetup(): #All Endpunkte sind erreichbar
+		curGameUpdateCheckker_Thread = threading.Thread(target=fetchGameUpdates)#Prüft ob das aktuelle Spiel updates hat
+		curGameUpdateCheckker_Thread.daemon = True
+		curGameUpdateCheckker_Thread.start()
+
+		showGame_Thread = threading.Thread(target=showGame)#Gibt Regelmässig aktuelle Werte fürs Spiel aus
+		showGame_Thread.daemon = True
+		showGame_Thread.start()
+
+		arduCom_Thread = threading.Thread(target=arduinoSerialReceiver)
+		arduCom_Thread.daemon = True
+		arduCom_Thread.start()
+		while True:
 				time.sleep(THREAD_CHECK_INTERVAL)
 				if not arduCom_Thread.is_alive(): #Thread ist fertig/abgestürzt
 					serial_conn.close() #Alte Serielle Verbindung beenden
 					checkArduinoConnection()
 					arduCom_Thread = threading.Thread(target=arduinoSerialReceiver)
+					arduCom_Thread.daemon = True
 					arduCom_Thread.start()
 		else:
 			logger.critical("Es gab Probleme bei einer Verbindung, bitte Prüfen sie die entsprechende Komponente. Das Program started in 5 Sekunden neu und versucht es erneut")
 		serial_conn.close() #Alte Serielle Verbindung beenden
 		time.sleep(5)
+	return
+
+
+def main():
+	userInit() #Warted darauf, das der Nutzer die nötigen eingaben getätigt hat
+	startSystem()
 	return
 
 

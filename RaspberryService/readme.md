@@ -24,11 +24,9 @@ UPDATE (16.06.2024): Der Spielerwechsel findet nun an anderer Stelle automatisch
 
 UPDATE (17.06.2024): Der Spielerwechsel findet doch wieder hier statt + implementation des ganzen als Statemachine
 
-Daher werden folgende API funktionalitäten vom Program benötigt:
-  - GET  /game := Um die Game id des aktuellsten Spiels heraus zu finden
-  - GET  /game/id := Um den aktuellen Zustand des Spiels zu ermitteln
-  - POST /game/{id}/throw/{number}/{modifier} := Um einen Wurf für das Spiel an die API zu übermitteln
-  - POST /game/{id}/undo := Um die lezte aktion Rückgängig zu machen, falls z.B. ein Fehlwurf festgestellt wurde [WIRD SO NICHT GENUZT AKTUELL]
+UPDATE (19.06.2024): Der Pi erhält ein externes LCD sowie Eingabemöglichkeit, um zu spielstart ein exestierendes Spiel,
+sowie einen Spieler auswählen zu können. 
+
 
 Aktuelle Todos:
 - [x] Arduino-Pi Schnittstelle
@@ -36,10 +34,11 @@ Aktuelle Todos:
   - [x] Bestimmung des jeweiligen Gamestates und berechnung des nächsten basierend auf empfangenden Daten
   - [x] Gamestate updates an die API senden
   - [x] Gamestate Updates von der API abfragen
-- [X] Einen Permanenten Connection Check Mechanismus/Daemon integrieren, welcher auch Neustarten + Pausieren kann wenn Verbindungen unterbrochen wurden
-  - [ ] Vielleicht sogar via Heartbeed Mechanismus (würde aber anpassungen in API und Arduino Code erfordern)
-- [ ] ALLE Zustände vollständig korrekt implementiert
-- [ ] Neustart mechanimsums für die Threads, falls API verbindung abbricht
+- [ ] Einen Permanenten Connection Check Mechanismus/Daemon integrieren, welcher auch Neustarten + Pausieren kann wenn Verbindungen unterbrochen wurden
+- [x] ALLE Zustände vollständig korrekt implementiert
+- [ ] LCD Implementaion
+- [ ] Externe Eingabe implementation
+- [ ] Implementieren eines wechselmechanismus aka ob das Spiel lokal zu verlasssen, und wieder einem anderen beitreten zu können (ohne das Program neustarten zu müssen) 
 
 - [ ] LED Steuerung
 - [ ] Camera Linien erkennung und verarbeitung
