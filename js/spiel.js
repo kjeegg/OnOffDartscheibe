@@ -33,9 +33,8 @@ function getGameId() {
     return urlParams.get('gameId');
 }
 function updateGameDisplay(game) {
-    const base = game;
 
-    if (!base || !base.Player || base.Player.length === 0) {
+    if (!game || !game.Player || game.Player.length === 0) {
         console.error('Invalid game data:', game);
         return;
     }
@@ -51,60 +50,53 @@ function updateGameDisplay(game) {
     }
 
     // Updating Player 1
-    const player1 = base.Player[0];
+    const player1 = game.Player[0];
     const player1Name = document.getElementById('player1Name');
     const player1Score = document.getElementById('score1');
-    const player1ThrowsContainer = document.getElementById('player1Throws');
 
     player1Name.textContent = player1.Name;
     player1Score.textContent = player1.Score?.Score || 0;
+    console.log(game.GameState);
 
     // Fill in the last 3 throws
-    if (player1.LastThrows && player1.LastThrows.length > 0) {
-        player1.LastThrows.slice(0, 3).forEach((throwData, index) => {
-            if (handleInvalidThrow(throwData)) {
-                const throwElement = document.getElementById(`throw-0-${index + 1}`);
-                throwElement.textContent = `${throwData.Number * throwData.Modifier}`;
+        if (game.ActivePlayer === 0) {
+            if (player1.LastThrows !== 3 && game.GameState === "THROW") {
+                player1.LastThrows.slice(0, 3).forEach((throwData, index) => {
+                    if (handleInvalidThrow(throwData)) {
+                        const throwElement = document.getElementById(`throw-0-${index + 1}`);
+                        throwElement.textContent = `${throwData.Number * throwData.Modifier}`;
+                    }
+                });
             }
-        });
-    } else {
-        for (let i = 0; i < 3; i++) {
-            const throwElement = document.getElementById(`throw-0-${index + 1}`);
-            throwElement.textContent = '-';
         }
-    }
 
     // Updating Player 2 if exists
-    if (base.Player.length > 1) {
-        const player2 = base.Player[1];
+    if (game.Player.length > 1) {
+        const player2 = game.Player[1];
         const player2Name = document.getElementById('player2Name');
         const player2Score = document.getElementById('score2');
-        const player2ThrowsContainer = document.getElementById('player2Throws');
 
         player2Name.textContent = player2.Name;
         player2Score.textContent = player2.Score?.Score || 0;
 
-
+        // Check GameState for NEXPLAYER or THROW
         // Fill in the last 3 throws
-        if (player2.LastThrows && player2.LastThrows.length > 0) {
-            player2.LastThrows.slice(0, 3).forEach((throwData, index) => {
-                if (handleInvalidThrow(throwData)) {
-                    const throwElement = document.getElementById(`throw-1-${index + 1}`);
-                    throwElement.textContent = `${throwData.Number * throwData.Modifier}`;
+            if (game.ActivePlayer === 1) {
+                if (player2.LastThrows !== 3 && game.GameState === "THROW") {
+                    player2.LastThrows.slice(0, 3).forEach((throwData, index) => {
+                        if (handleInvalidThrow(throwData)) {
+                            const throwElement = document.getElementById(`throw-1-${index + 1}`);
+                            throwElement.textContent = `${throwData.Number * throwData.Modifier}`;
+                        }
+                    });
                 }
-            });
-        } else {
-            for (let i = 0; i < 3; i++) {
-                const throwElement = document.getElementById(`throw-1-${index + 1}`);
-                throwElement.textContent = '-';
-            }
-        }
+            } 
     }
 
     const historyTableBody = document.getElementById('historyTableBody');
     if (historyTableBody) {
         historyTableBody.innerHTML = '';
-        base.Player.forEach(player => {
+        game.Player.forEach(player => {
             if (player.ThrowRounds) {
                 player.ThrowRounds.forEach(round => {
                     if (round.Throws && round.Throws.length > 0) {
@@ -129,6 +121,30 @@ function updateGameDisplay(game) {
 
     previousGameData = game;
 }
+
+document.addEventListener('DOMContentLoaded', function() {
+    loadTitle();
+});
+async function loadTitle() {
+    const gameId = getGameId();
+    try {
+        const response = await fetch(`api.php?apiFunction=getGameDisplay&gameId=${gameId}`, {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        });
+        if (!response.ok) {
+            throw new Error('Network response was not ok');
+        }
+        const game = await response.json();
+        document.getElementById('game-variant').textContent = game.Variant || '501';
+        document.getElementById('game-out').textContent = game.Out + ' out';
+    } catch (error) {
+        console.error('Fehler beim Laden des Spiels:', error);
+    }
+}
+
 // nextPlayer: fetch game and nextPlayer, update last 3 throws, loadGame
 async function nextPlayer() {
     const gameId = getGameId();
@@ -168,6 +184,7 @@ function clearLast3Throws(player) {
     for (let i = 1; i <= 3; i++) {
         const throwElement = document.getElementById(`throw-${player}-${i}`);
         throwElement.innerHTML = '';
+        console.log('Cleared throw-' + player + '-' + i);
     }
 }
 

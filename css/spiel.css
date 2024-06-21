@@ -91,7 +91,7 @@ body {
     font-size: var(--xlarge);
     color: white;
     background-color: #000000;
-    border-radius: var(--corner-large);
+    border-radius: var(--corner-medium);
     margin-bottom: 20px;
     width: 100%;
 }
