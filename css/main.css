@@ -11,6 +11,7 @@
     --xlarge: 67px;
 
     /* colors */
+    --gray: #f3f3f3;
     --light-gray: #f3f3f3;
     --dark-gray: #121212;
     --fh-mint: #00b1ac;
@@ -27,6 +28,7 @@
     --bg-color: black;
     --font-color: white;
     --arrow-icon: url(/assets/arrow_white.svg);
+    --gray: #121212;
 }
 body {
     font-family: Outfit, sans-serif;
@@ -146,6 +148,7 @@ footer {
 }
 .btn:hover {
     background-color: var(--fh-mint);
+    box-shadow: 0px 0px 20px 0px var(--fh-mint);
     transition: 0.2s;
     color: white;
 }
@@ -157,7 +160,7 @@ footer {
     background-color: var(--font-color);
     color: var(--bg-color);
     border: none;
-    border-radius: var(--corner-medium);
+    border-radius: var(--corner-large);
     text-decoration: none;
     font-size: var(--medium);
     font-weight: 600;
