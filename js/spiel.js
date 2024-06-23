@@ -2,6 +2,7 @@
 const container = document.querySelector('.fireworks-container');
 const fireworks = new Fireworks.default(container);
 
+// Problems: no last throws when reloading site, first throw takes 2 fetch requests
 async function loadGame() {
     const gameId = getGameId();
 
@@ -20,10 +21,26 @@ async function loadGame() {
         const game = await response.json();
         updateGameDisplay(game);
         updatePlayerTurn(game);
+        setLast3Throws(game);
         
-        if(game.Player[0].Score?.Score === 0 || game.Player[1].Score?.Score === 0) {
+        // Check if game is finished
+        // Can be done with GameState instead
+        if (game.Player[0].Score?.Score === 0 || game.Player[1].Score?.Score === 0) {
             displayWinner(game);
         } 
+        // Switch to next player after 3 throws, timeout
+        if (game.GameState === "NEXTPLAYER") {
+            setTimeout(() => { nextPlayer() }, 1000);
+        }
+        // Set first throw after player switch
+        if (game.Player[game.ActivePlayer].LastThrows.length < 3) {
+            localStorage.setItem('playerSwitched', 'false');
+        }
+        // Clear last throws if player switched
+        if (localStorage.getItem('playerSwitched') === 'true') {
+            clearLast3Throws(game.ActivePlayer);
+        }
+        
     } catch (error) {
         console.error('Fehler beim Laden des Spiels:', error);
     }
@@ -32,21 +49,55 @@ function getGameId() {
     const urlParams = new URLSearchParams(window.location.search);
     return urlParams.get('gameId');
 }
+// Rn just a duplicate of loadGame
+async function getGameById(gameId) {
+    try {
+        const response = await fetch(`api.php?apiFunction=getGameDisplay&gameId=${gameId}`, {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        });
+
+        if (!response.ok) {
+            throw new Error('Network response was not ok');
+        }
+
+        const game = await response.json();
+        return game;
+    } catch (error) {
+        console.error('Fehler beim Laden des Spiels:', error);
+    }
+}
+
+
+function setLast3Throws(game) {
+    const player1 = game.Player[0];
+    const player2 = game.Player[1];
+    // i -> player, j -> throw
+    for (let i = 0; i <= 1; i++) {
+        if (game.ActivePlayer === i && localStorage.getItem('playerSwitched') !== 'true') {
+            for (let j = 0 ; j <= game.Player[i].LastThrows.length - 1; j++) {
+                const throwElement = document.getElementById(`throw-${i}-${j + 1}`);
+                throwElement.textContent = `${game.Player[i].LastThrows[j].Number * game.Player[i].LastThrows[j].Modifier}`;
+            }
+        }
+    }
+}
+
+function clearLast3Throws(player) {
+    for (let i = 1; i <= 3; i++) {
+        const throwElement = document.getElementById(`throw-${player}-${i}`);
+        throwElement.innerHTML = '';
+        // console.log('Cleared throw-' + player + '-' + i);
+    }
+}
+
 function updateGameDisplay(game) {
 
     if (!game || !game.Player || game.Player.length === 0) {
         console.error('Invalid game data:', game);
         return;
-    }
-
-    // Function to handle invalid throws
-    function handleInvalidThrow(throwData) {
-        const throwValue = throwData.Number * throwData.Modifier;
-        if (throwValue === 0) {
-            //alert('Invalid throw: 0 points. This throw will not be recorded.');
-            return false;
-        }
-        return true;
     }
 
     // Updating Player 1
@@ -56,20 +107,7 @@ function updateGameDisplay(game) {
 
     player1Name.textContent = player1.Name;
     player1Score.textContent = player1.Score?.Score || 0;
-    console.log(game.GameState);
-
-    // Fill in the last 3 throws
-        if (game.ActivePlayer === 0) {
-            if (player1.LastThrows !== 3 && game.GameState === "THROW") {
-                player1.LastThrows.slice(0, 3).forEach((throwData, index) => {
-                    if (handleInvalidThrow(throwData)) {
-                        const throwElement = document.getElementById(`throw-0-${index + 1}`);
-                        throwElement.textContent = `${throwData.Number * throwData.Modifier}`;
-                    }
-                });
-            }
-        }
-
+    
     // Updating Player 2 if exists
     if (game.Player.length > 1) {
         const player2 = game.Player[1];
@@ -78,20 +116,8 @@ function updateGameDisplay(game) {
 
         player2Name.textContent = player2.Name;
         player2Score.textContent = player2.Score?.Score || 0;
-
-        // Check GameState for NEXPLAYER or THROW
-        // Fill in the last 3 throws
-            if (game.ActivePlayer === 1) {
-                if (player2.LastThrows !== 3 && game.GameState === "THROW") {
-                    player2.LastThrows.slice(0, 3).forEach((throwData, index) => {
-                        if (handleInvalidThrow(throwData)) {
-                            const throwElement = document.getElementById(`throw-1-${index + 1}`);
-                            throwElement.textContent = `${throwData.Number * throwData.Modifier}`;
-                        }
-                    });
-                }
-            } 
     }
+    
 
     const historyTableBody = document.getElementById('historyTableBody');
     if (historyTableBody) {
@@ -121,6 +147,36 @@ function updateGameDisplay(game) {
 
     previousGameData = game;
 }
+async function deleteLastThrows() {
+    const gameId = getGameId();
+    try {
+        const response = await fetch(`api.php?apiFunction=deleteLastThrows&gameId=${gameId}`, {
+            method: 'DELETE',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        });
+
+        if (!response.ok) {
+            throw new Error('Network response was not ok');
+        }
+
+        loadGame();
+    } catch (error) {
+        console.error('Fehler beim Löschen der letzten Würfe:', error);
+    }
+
+}
+
+// Handle invalid throws
+function handleInvalidThrow(throwData) {
+    const throwValue = throwData.Number * throwData.Modifier;
+    if (throwValue === 0) {
+        //alert('Invalid throw: 0 points. This throw will not be recorded.');
+        return false;
+    }
+    return true;
+}
 
 document.addEventListener('DOMContentLoaded', function() {
     loadTitle();
@@ -145,7 +201,7 @@ async function loadTitle() {
     }
 }
 
-// nextPlayer: fetch game and nextPlayer, update last 3 throws, loadGame
+// nextPlayer: fetch game and nextPlayer API, update last 3 throws, loadGame
 async function nextPlayer() {
     const gameId = getGameId();
     // get game
@@ -164,7 +220,7 @@ async function nextPlayer() {
     } catch (error) {
         console.error('Fehler beim Laden des Spiels:', error);
     }
-    // get ActivePlayer
+    // send nextPlayer request
     try {
         await fetch(`api.php?apiFunction=nextPlayer&gameId=${gameId}`, {
             method: 'POST',
@@ -177,16 +233,11 @@ async function nextPlayer() {
     }
     console.log('ActivePlayer: ' + ActivePlayer);
     loadGame();
-    clearLast3Throws(ActivePlayer);
+    // clearLast3Throws(ActivePlayer);
+    localStorage.setItem('playerSwitched', 'true');
 }
 
-function clearLast3Throws(player) {
-    for (let i = 1; i <= 3; i++) {
-        const throwElement = document.getElementById(`throw-${player}-${i}`);
-        throwElement.innerHTML = '';
-        console.log('Cleared throw-' + player + '-' + i);
-    }
-}
+
 
 /* game buttons */
 async function skipTurn() {
