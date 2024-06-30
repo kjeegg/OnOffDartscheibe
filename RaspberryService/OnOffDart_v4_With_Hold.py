@@ -669,7 +669,7 @@ def sendThrow(modifier: int, value: int):
 		global start_time
 		duration =  end_time - start_time  #rechnen wie lange diese schon dauert
 		if duration >= 0.2:   #wenn länger als 200ms
-			state = getNextThrowState(state)  #dann zum nächsten Zustand
+			state:str = getNextThrowState(state)  #dann zum nächsten Zustand
 		else:		
 			return   #ansonnsten aus der Funktion raus
 
