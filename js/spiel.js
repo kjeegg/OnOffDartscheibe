@@ -31,13 +31,17 @@ async function loadGame() {
 
         // REMOVE THIS
         // Switch to next player after 3 throws, timeout
+        /*
         if (game.GameState === "NEXTPLAYER") {
             setTimeout(() => { nextPlayer() }, 100);
+            console.log('Next player');
         }
+        */
         
         // Set first throw after player switch
         if (game.Player[game.ActivePlayer].LastThrows.length < 3) {
             localStorage.setItem('playerSwitched', 'false');
+            console.log('playerSwitched: false');
         }
         // Clear last throws if player switched
         if (localStorage.getItem('playerSwitched') === 'true') {
@@ -75,8 +79,6 @@ async function getGameById(gameId) {
 
 
 function setLast3Throws(game) {
-    const player1 = game.Player[0];
-    const player2 = game.Player[1];
     // i -> player, j -> throw
     for (let i = 0; i <= 1; i++) {
         // unnecessary but leaving this here in case we need it again
@@ -84,7 +86,11 @@ function setLast3Throws(game) {
 
         for (let j = 0 ; j <= game.Player[i].LastThrows.length - 1; j++) {
             const throwElement = document.getElementById(`throw-${i}-${j + 1}`);
-            throwElement.textContent = `${game.Player[i].LastThrows[j].Number * game.Player[i].LastThrows[j].Modifier}`;
+            if (game.Player[i].LastThrows[j].Number === 0) {
+                throwElement.textContent = "X";
+            } else {
+                throwElement.textContent = `${game.Player[i].LastThrows[j].Number * game.Player[i].LastThrows[j].Modifier}`;
+            }
         }
     }
 }
@@ -235,7 +241,7 @@ async function nextPlayer() {
     } catch (error) {
         console.error('Fehler beim Spielerwechsel:', error);
     }
-    console.log('ActivePlayer: ' + ActivePlayer);
+    console.log('Last ActivePlayer: ' + ActivePlayer);
     loadGame();
     // clearLast3Throws(ActivePlayer);
     localStorage.setItem('playerSwitched', 'true');

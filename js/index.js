@@ -96,7 +96,6 @@ document.getElementById('joinGameForm').addEventListener('submit', async functio
         }
 
         const data = await response.json();
-        alert('Spiel beigetreten!');
         window.location.href = `spiel.html?gameId=${gameId}`;
     } catch (error) {
         alert('Fehler beim Beitreten des Spiels: ' + error.message);
