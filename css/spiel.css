@@ -105,6 +105,7 @@ body {
 }
 .throw {
     font-size: var(--large);
+    box-shadow: 0px 0px 5px 0px rgb(208, 208, 208);
     align-items: center;
     justify-content: center;
     font-weight: 600;

@@ -2,6 +2,7 @@
 const container = document.querySelector('.fireworks-container');
 const fireworks = new Fireworks.default(container);
 
+
 // Problems: no last throws when reloading site, first throw takes time idk why
 async function loadGame() {
     const gameId = getGameId();
@@ -41,10 +42,11 @@ async function loadGame() {
         // Set first throw after player switch
         if (game.Player[game.ActivePlayer].LastThrows.length < 3) {
             localStorage.setItem('playerSwitched', 'false');
+            localStorage.setItem('throwRound: ' + game.throwRound);
             console.log('playerSwitched: false');
         }
         // Clear last throws if player switched
-        if (localStorage.getItem('playerSwitched') === 'true') {
+        if (game.GameState === "THROW" && game.Player[game.ActivePlayer].LastThrows.length === 3) {
             clearLast3Throws(game.ActivePlayer);
         }
         
