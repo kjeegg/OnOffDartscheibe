@@ -2,7 +2,7 @@
 const container = document.querySelector('.fireworks-container');
 const fireworks = new Fireworks.default(container);
 
-// Problems: no last throws when reloading site, first throw takes 2 fetch requests
+// Problems: no last throws when reloading site, first throw takes time idk why
 async function loadGame() {
     const gameId = getGameId();
 
@@ -28,10 +28,13 @@ async function loadGame() {
         if (game.Player[0].Score?.Score === 0 || game.Player[1].Score?.Score === 0) {
             displayWinner(game);
         } 
+
+        // REMOVE THIS
         // Switch to next player after 3 throws, timeout
         if (game.GameState === "NEXTPLAYER") {
-            setTimeout(() => { nextPlayer() }, 1000);
+            setTimeout(() => { nextPlayer() }, 100);
         }
+        
         // Set first throw after player switch
         if (game.Player[game.ActivePlayer].LastThrows.length < 3) {
             localStorage.setItem('playerSwitched', 'false');
@@ -76,11 +79,12 @@ function setLast3Throws(game) {
     const player2 = game.Player[1];
     // i -> player, j -> throw
     for (let i = 0; i <= 1; i++) {
-        if (game.ActivePlayer === i && localStorage.getItem('playerSwitched') !== 'true') {
-            for (let j = 0 ; j <= game.Player[i].LastThrows.length - 1; j++) {
-                const throwElement = document.getElementById(`throw-${i}-${j + 1}`);
-                throwElement.textContent = `${game.Player[i].LastThrows[j].Number * game.Player[i].LastThrows[j].Modifier}`;
-            }
+        // unnecessary but leaving this here in case we need it again
+        // if (game.Activeplayer = i && localStorage.getItem('playerSwitched') !== 'true')
+
+        for (let j = 0 ; j <= game.Player[i].LastThrows.length - 1; j++) {
+            const throwElement = document.getElementById(`throw-${i}-${j + 1}`);
+            throwElement.textContent = `${game.Player[i].LastThrows[j].Number * game.Player[i].LastThrows[j].Modifier}`;
         }
     }
 }
@@ -340,5 +344,5 @@ function updatePlayerTurn(game) {
 
 window.onload = function() {
     loadGame();
-    setInterval(loadGame, 5000); // Update every 5 seconds
+    setInterval(loadGame, 2000); // Update interval
 };

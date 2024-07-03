@@ -28,15 +28,19 @@ async function getHighestGameUID() {
     }
 }
 
+// New game
 document.getElementById('createGameForm').addEventListener('submit', async function(event) {
     event.preventDefault();
     const highestUID = await getHighestGameUID();
+
+    // should not happen, highestUID is 0 if no games exist
     if (highestUID === null) {
         alert('Fehler beim Erstellen des neuen Spiels');
         return;
     }
 
     const newGameId = String(parseInt(highestUID) + 1);
+
     const player1Id = parseInt(document.getElementById('player1Id').value);
     const player2Id = parseInt(document.getElementById('player2Id').value);
 
@@ -68,13 +72,13 @@ document.getElementById('createGameForm').addEventListener('submit', async funct
         }
 
         const data = await response.json();
-        alert('Spiel erfolgreich erstellt!');
         window.location.href = `spiel.html?gameId=${newGameId}`;
     } catch (error) {
         alert('Fehler beim Erstellen des Spiels: ' + error.message);
     }
 });
 
+// Join game
 document.getElementById('joinGameForm').addEventListener('submit', async function(event) {
     event.preventDefault();
     const gameId = document.getElementById('joinGameId').value;
@@ -99,6 +103,7 @@ document.getElementById('joinGameForm').addEventListener('submit', async functio
     }
 });
 
+// Login
 document.getElementById('loginForm').addEventListener('submit', function(event) {
     event.preventDefault();
     const username = document.getElementById('username').value;
@@ -112,6 +117,7 @@ document.getElementById('loginForm').addEventListener('submit', function(event) 
     }
 });
 
+// Add player
 document.getElementById('addPlayerForm').addEventListener('submit', async function(event) {
     event.preventDefault();
     const playerName = document.getElementById('playerName').value;
