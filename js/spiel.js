@@ -2,8 +2,9 @@
 const container = document.querySelector('.fireworks-container');
 const fireworks = new Fireworks.default(container);
 
+// Script Version
+console.log("Version: " + 0.1);
 
-// Problems: no last throws when reloading site, first throw takes time idk why
 async function loadGame() {
     const gameId = getGameId();
 
@@ -28,26 +29,22 @@ async function loadGame() {
         // Can be done with GameState instead
         if (game.Player[0].Score?.Score === 0 || game.Player[1].Score?.Score === 0) {
             displayWinner(game);
-        } 
-
-        // REMOVE THIS
-        // Switch to next player after 3 throws, timeout
-        /*
-        if (game.GameState === "NEXTPLAYER") {
-            setTimeout(() => { nextPlayer() }, 100);
-            console.log('Next player');
         }
-        */
         
-        // Set first throw after player switch
-        if (game.Player[game.ActivePlayer].LastThrows.length < 3) {
-            localStorage.setItem('playerSwitched', 'false');
-            localStorage.setItem('throwRound: ' + game.throwRound);
-            console.log('playerSwitched: false');
-        }
         // Clear last throws if player switched
         if (game.GameState === "THROW" && game.Player[game.ActivePlayer].LastThrows.length === 3) {
             clearLast3Throws(game.ActivePlayer);
+        }
+        // Clear last throws if game just started
+        if (game.ThrowRound === 1) {
+            clearLast3Throws(0);
+            clearLast3Throws(1);
+        }
+
+        if (game.GameState === "BUST") {
+            bust(game, false);
+        } else if (game.GameState === "BUSTNOCHECKOUT") {
+            bust(game, true);
         }
         
     } catch (error) {
@@ -246,10 +243,23 @@ async function nextPlayer() {
     console.log('Last ActivePlayer: ' + ActivePlayer);
     loadGame();
     // clearLast3Throws(ActivePlayer);
-    localStorage.setItem('playerSwitched', 'true');
 }
 
+var bustModal = new bootstrap.Modal(document.getElementById("bustModal"));
+/**
+ * 
+ * @param {GameObject} game 
+ * @param {bool} nocheckout 
+ */
 
+function bust(game, nocheckout = false) {
+    if (nocheckout) {
+        document.getElementById('bust-dialog').textContent = game.Player[game.ActivePlayer].Name + " kann nicht auschecken!";
+    } else {
+        document.getElementById('bust-dialog').textContent = game.Player[game.ActivePlayer].Name + "'s Punkte wurden zurückgesetzt!";
+    }
+    bustModal.show();
+}
 
 /* game buttons */
 async function skipTurn() {
