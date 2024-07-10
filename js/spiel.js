@@ -3,7 +3,9 @@ const container = document.querySelector('.fireworks-container');
 const fireworks = new Fireworks.default(container);
 
 // Script Version
-console.log("Version: " + 0.1);
+console.log("Version: " + 0.2);
+
+let bustCanBeDisplayed = false;
 
 async function loadGame() {
     const gameId = getGameId();
@@ -34,6 +36,7 @@ async function loadGame() {
         // Clear last throws if player switched
         if (game.GameState === "THROW" && game.Player[game.ActivePlayer].LastThrows.length === 3) {
             clearLast3Throws(game.ActivePlayer);
+            bustCanBeDisplayed = true;
         }
         // Clear last throws if game just started
         if (game.ThrowRound === 1) {
@@ -260,6 +263,7 @@ function bust(game, nocheckout = false) {
     }
     bustModal.show();
 }
+bustModal.on('hidden.bs.modal', bustCanBeDisplayed = false);
 
 /* game buttons */
 async function skipTurn() {
