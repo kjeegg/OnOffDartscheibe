@@ -64,11 +64,11 @@ serial_conn = serial.Serial() #Das Objekt für die Serielle Verbindung (wird bei
 
 # Create a custom logger
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.INFO)#Logger loggt erstmal alles
+logger.setLevel(logging.DEBUG)#Logger loggt erstmal alles
 
 # Create handlers
 consoleLogHandler = logging.StreamHandler()
-consoleLogHandler.setLevel(logging.DEBUG)#Auf der console wird maximal INFO lvl ausgegeben
+consoleLogHandler.setLevel(logging.INFO)#Auf der console wird maximal INFO lvl ausgegeben
 
 logFileHandler = logging.FileHandler(LOG_FILE_LOCATION)
 logFileHandler.setLevel(logging.DEBUG)#In der Log Datei wird alles gespeicehrt bis einschließlich DEBUG
