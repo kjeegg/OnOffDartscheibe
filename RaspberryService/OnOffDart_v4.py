@@ -6,12 +6,14 @@ import logging
 import threading
 from threading import Lock
 import time
+from lcdSelect import lcdUserListSelect
 
-ARDUINO_PORT:str = "COM8" #Der Port an welchem Der Arduino via USB angeschlossen ist
+
+ARDUINO_PORT:str = "/dev/ttyUSB0" #Der Port an welchem Der Arduino via USB angeschlossen ist
 BAUD_RATE:int = 9600 #Die Baud Rate für die Arduino-USB-Serial Verbindnung
 SERIAL_TIMEOUT:int = 3#Der Maximal zulässige Tiemout für die Serielle Verbindung
 
-API_SERVER_DOMAIN:str = "http://localhost:8000/api"#Die Domain des API-Servers
+API_SERVER_DOMAIN:str = "https://api.onoff-dart.de/api"#Die Domain des API-Servers
 
 THREAD_CHECK_INTERVAL:int = 5 # Prüfe alle X Sekunden ob noch alle Threads laufen oder iwo probleme aufgetreten sind, versuche bei Problemen neu zu starten
 
@@ -983,23 +985,25 @@ def userInit():
 		while games == None:
 			games = fetchAPIGames()
 			time.sleep(1)
-		print("Welches Spiel: ")
-		s = ""
-		for spiel in games:
-			s = s + spiel.uid + " | "
-		print(s)
-		uid = int(input(""))
+		spieleListe = [] #Liste aus Strings
+
+		for i in range(len(games)):
+			spieleListe.append(f"{i+1}. UID: {games[i].uid}")
+
+		uid_auswahl:int = lcdUserListSelect(spieleListe)
+		uid = games[uid_auswahl].uid
+		logger.info(f"Übers Display wurde Spiel: {uid} gewählt")
+
+
 		setUID(uid)
 		curGame:Spiel = fetchUIDGame(getUID())
 		p1:Spieler = createPlayer(curGame, 0)
 		p2:Spieler = createPlayer(curGame, 1)
-		print("Welche UID: ")
-		print(f"{p1.uid}: {p1.name}")
-		print(f"{p2.uid}: {p2.name}")
-		pUID = int(input(""))
 
-
-		#Erste initialisierung aller variablen, aktuellen Spielzustand bestimmen anhand der Daten
+		spieler_liste = [f"Spieler UID: {p1.uid}: {p1.name}", f"Spieler UID: {p2.uid}: {p2.name}"]
+		spieler_auswahl:int = lcdUserListSelect(spieler_liste)
+		pUID = p1.uid if spieler_auswahl == 0 else p2.uid
+		logger.info(f"Übers Display wurde Spieler: {pUID} gewählt")
 		
 		state:str = calcGameState(curGame, pUID)
 		
@@ -1011,8 +1015,8 @@ def userInit():
 		setPlayer(curPlayer)
 		setState(state)
 
-	else:
-		os._exit() #Beende erstmal wenn die API nicht erreicht werden kann
+	#else:
+		#os._exit() #Beende erstmal wenn die API nicht erreicht werden kann
 	
 	'''
 	#TODO:
