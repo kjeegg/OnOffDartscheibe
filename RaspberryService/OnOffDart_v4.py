@@ -1,3 +1,5 @@
+#!/usr/bin/python3
+
 import serial
 import requests
 from requests.packages.urllib3.exceptions import InsecureRequestWarning
@@ -7,6 +9,7 @@ import threading
 from threading import Lock
 import time
 from lcdSelect import lcdUserListSelect
+
 
 
 ARDUINO_PORT:str = "/dev/ttyUSB0" #Der Port an welchem Der Arduino via USB angeschlossen ist
@@ -136,7 +139,6 @@ Verkabelung:
 Schaltet den angeschlossenden LED Strip
 '''
 def enableLEDs():
-	#Todo: Implement
 	return
 
 
@@ -659,6 +661,7 @@ def sendThrow(modifier: int, value: int):
 		statusCode, jsonResponse = pushThrowToAPI(uid, modifier, value)#Schickt den Wurf an die API		
 		if statusCode != None: #Keine Verbindungsprobleme, bei Problemen wird Fehler woanders ausgegeben
 			if statusCode == 200: #Keine Probleme, Übertragung hat funktioniert
+
 				newState:str = getNextThrowState(state) #Placeholder
 				if newState == None:#Tritt nur ein wenn ein ungültiger State vorlag (kann eigentlich nicht hier eintreten, außer race condition)
 					return
@@ -697,11 +700,11 @@ def sendThrow(modifier: int, value: int):
 					setState('OTHER_PLAYER') #Neuen State entsprechend setzen
 					logger.info(f'Sie hatten bereits 3 Würfe. Wechsel Spieler')
 					return
-			elif wurfStatusCode == 404: #Dürfte auch nicht eintreten, außer das Spiel wurde während des Spielablaufs gelöscht
+			elif statusCode == 404: #Dürfte auch nicht eintreten, außer das Spiel wurde während des Spielablaufs gelöscht
 				logger.critical(f"{localPlayer.name} - Ihr Wurf: {modifier},{value}, konnte nicht übertragen werden, da das Spiel mit der UID: {uid}, nicht gefunden werden konnte. (Wurde vermutlich gelöscht/beendet)")
 				return
 			else: #Unbekannter Fehler -> Ausgeben
-				logger.critical(f"Beim Übertragen des Wurfs ist ein unbekannter Fehler aufgetreten. Response Code: {wurfStatusCode}:{json.dumps(jsonResponse)}")
+				logger.critical(f"Beim Übertragen des Wurfs ist ein unbekannter Fehler aufgetreten. Response Code: {statusCode}:{json.dumps(jsonResponse)}")
 				return
 
 		if state == 'OTHER_PLAYER':
@@ -841,34 +844,6 @@ def checkGameStateChanges(latestGame: Spiel):
 
 
 
-		#if curState == 'THROW_1' or curState == 'THROW_2' or curState == 'THROW_3': #Wir sind dran und können Werfen
-			#rundenWuerfe:int = len(aktPlayer.lastThrows) #Die anzahl an bisherigen Würfen des Aktiven Spielrs für die aktuelle Runde
-			#newState = None
-			#match rundenWuerfe:
-				#case 0: 
-					#newState = 'THROW_1'
-				#case 1: 
-					#newState = 'THROW_2'
-				#case 2: 
-					#newState = 'THROW_3'
-				#case 3: #Wir hatten alle Würfe, haben aber noch nicht gewechselt
-					#newState = 'OTHER_PLAYER'
-			#if newState != curState: #Wenn eine Diskrpanz zwischen den Gespeicherten Würfen und den Loaklem Wurfstate vorliegt
-				#setState(newState)#Ändere den Zustand
-				#logger.warning(f"Externes Update: Diskrepanz bei den Würfen festgestellt: {newState}. Zustand Vorher: {curState}.")
-			#return;
-#
-#
-		#if curState == 'OTHER_PLAYER':
-			#if aktPlayer.uid == localPlayer.uid: #Aktiver Spieler sind wieder wir (aka anderer Spieler ist fertig) -> Spielerwechsel hat stattgefunden
-				#setState('THROW_1')#Wechsel Zustand
-				#logger.info(f"Der andere Spieler ist fertig. Nun bitte werfen")
-				#return
-			#else: #Der andere Spieler ist noch nicht fertig -> warten
-				#return
-
-
-
 
 #-----------------------------
 
@@ -988,9 +963,9 @@ def userInit():
 		spieleListe = [] #Liste aus Strings
 
 		for i in range(len(games)):
-			spieleListe.append(f"{i+1}. UID: {games[i].uid}")
+			spieleListe.append(f"Spiel: {games[i].uid}")
 
-		uid_auswahl:int = lcdUserListSelect(spieleListe)
+		uid_auswahl:int = lcdUserListSelect(spieleListe, "Bitte UID ihres Spiels waehlen:")
 		uid = games[uid_auswahl].uid
 		logger.info(f"Übers Display wurde Spiel: {uid} gewählt")
 
@@ -1000,8 +975,8 @@ def userInit():
 		p1:Spieler = createPlayer(curGame, 0)
 		p2:Spieler = createPlayer(curGame, 1)
 
-		spieler_liste = [f"Spieler UID: {p1.uid}: {p1.name}", f"Spieler UID: {p2.uid}: {p2.name}"]
-		spieler_auswahl:int = lcdUserListSelect(spieler_liste)
+		spieler_liste = [f"Spieler: {p1.uid}: {p1.name}", f"Spieler: {p2.uid}: {p2.name}"]
+		spieler_auswahl:int = lcdUserListSelect(spieler_liste, "Bitte ihren Spieler waehlen:")
 		pUID = p1.uid if spieler_auswahl == 0 else p2.uid
 		logger.info(f"Übers Display wurde Spieler: {pUID} gewählt")
 		
