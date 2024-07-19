@@ -1,0 +1,11 @@
+[Unit]
+Description=Dascr Raspberry Service
+After=network.target
+
+[Service]
+WorkingDirectory=/home/pi/AKTUELL_RASPI_SCRIPT
+ExecStart=/home/pi/AKTUELL_RASPI_SCRIPT/OnOffDart_v4.py
+User=pi
+
+[Install]
+WantedBy=multi-user.target
