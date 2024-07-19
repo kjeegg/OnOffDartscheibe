@@ -33,8 +33,10 @@ last_encoder_value = 0
 
 def update_display():
     global header_position
+
+    # Create a new image with white background
     image1 = Image.new("RGB", (disp.width, disp.height), "WHITE")
-    image1 = image1.rotate(-90, expand=True)  # Rotation because of side image
+    image1 = image1.rotate(-90, expand=True)  # Rotate image
     draw = ImageDraw.Draw(image1)
     
     header_width = disp.width - 20  # Margin
@@ -66,14 +68,37 @@ def update_display():
     underline_start = 25
     underline_end = min(disp.width - 25, underline_start + header_width)
     draw.line([(underline_start, underline_y), (underline_end, underline_y)], fill="BLACK", width=2)
-    
-    # List items
-    for i in range(num_items):
-        text = '> ' + input_list[i] if i == current_position else '  ' + input_list[i]
-        y_position = len(header_lines) * Schriftart.getsize(header_lines[0])[1] + i * Schriftart.getsize(text)[1] + 50
-        draw.text((25, y_position), text, font=Schriftart, fill="BLACK")
+
+    # Fixed position for cursor
+    cursor_x = 25
+    cursor_y = len(header_lines) * Schriftart.getsize(header_lines[0])[1] + (disp.height - len(header_lines) * Schriftart.getsize(header_lines[0])[1] - Schriftart.getsize('A')[1]) // 2
+
+    # Calculate visible items
+    item_height = Schriftart.getsize("A")[1]
+    visible_items_count = (disp.height - underline_y - 10) // item_height
+
+    # Determine the range of items to display
+    start_index = max(0, current_position - visible_items_count // 2)
+    end_index = min(num_items, start_index + visible_items_count)
+
+    # Adjust start_index if the last item is not fully visible
+    if end_index == num_items and num_items > visible_items_count:
+        start_index = max(0, num_items - visible_items_count)
+
+    # Render list items with fixed cursor
+    for i in range(start_index, end_index):
+        text = input_list[i]
+        item_y_position = len(header_lines) * Schriftart.getsize(header_lines[0])[1] + (i - start_index) * item_height + 45
+        if i == current_position:
+            draw.text((cursor_x, item_y_position), '> ' + text, font=Schriftart, fill="BLACK")
+        else:
+            draw.text((cursor_x + Schriftart.getsize('> ')[0], item_y_position), text, font=Schriftart, fill="BLACK")
 
     disp.ShowImage(image1)
+
+
+
+
 
 def clear_display():
     disp.clear()
