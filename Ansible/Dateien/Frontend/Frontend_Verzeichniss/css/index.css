@@ -1,0 +1,29 @@
+
+h1 {
+    color: var(--font-color);
+}
+.content {
+    text-align: center;
+    margin-top: 20%;
+}
+.btn-group {
+    margin-top: 20px;
+}
+.modal-content {
+    border-radius: var(--corner-medium);
+}
+.modal-body {
+    padding: 20px;
+}
+.modal-title {
+    margin-left: 10px;
+}
+.form-label {
+    margin-left: 10px;
+}
+.form-control {
+    border-radius: var(--corner-medium);
+}
+.form-control:focus {
+    border-color: var(--fh-mint);
+}

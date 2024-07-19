@@ -1,0 +1,15 @@
+[Unit]
+Description=Dascr Backend Service
+After=network.target
+
+[Service]
+Environment=API_IP=0.0.0.0
+Environment=API_PORT=8000
+Environment=DEBUG=FALSE
+
+WorkingDirectory=/home/dascr/Dascr_Backend
+ExecStart=/home/dascr/Dascr_Backend/dascr-board
+User=dascr
+
+[Install]
+WantedBy=multi-user.target

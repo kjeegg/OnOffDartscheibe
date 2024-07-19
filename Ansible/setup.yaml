@@ -1,0 +1,489 @@
+- name: Updates auf allen Systemen installieren
+  hosts: all
+  tags: always
+  become: true
+  pre_tasks:
+
+    - name: Alle - Führe initial-updates aus
+      tags: alle,updates
+      apt:
+        update_cache: yes
+        upgrade: dist
+        autoremove: true
+
+    - name: Alle - Installiere sudo
+      tags: alle,sudo 
+      apt:
+        name: sudo
+
+
+#----------------------------------------------------------------------------
+
+- name: Backend - Das Dascr Backend aufsetzen
+  hosts: Server
+  tasks:
+    - name: Backend - Benötigte extra Pakete für Dascr installieren
+      tags: backend,dascr,packete
+      become: true
+      package:
+        name: 
+          - git
+          - golang
+          - gcc
+          - make
+          - build-essential
+          - sqlite3
+      register: installiere_dascr_packete
+
+    - name: Backend - lege Dascr Nutzer an
+      tags: backend,nutzer
+      become: true
+      user:
+        name: '{{ USER_DASCR }}'
+        shell: /bin/bash
+        state: present
+        create_home: true
+      register: create_Dascr_Nutzer
+
+    - name: Backend - Entwaige Alt-Dateien löschen
+      tags: backend,cleanup
+      become: true
+      file:
+        path: '{{ item }}'
+        state: absent
+      loop:
+        - '/home/{{ USER_DASCR }}/dascr-board'
+        - '/home/{{ USER_DASCR }}/Dascr_Backend'
+        - '/etc/systemd/system/dascr-backend.service'
+
+      
+
+    - name: Backend - Downloade Dascr Backend
+      tags: backend,dascr
+      become: true 
+      become_user: '{{ USER_DASCR }}' #Wechsel zum Dascr Nutzer
+      command:
+        chdir: '/home/{{ USER_DASCR }}'
+        cmd: "git clone https://github.com/dascr/dascr-board"
+      when: not create_Dascr_Nutzer.failed #Nur ausführen wenn Dascr Nutzer erfolgreich erstellt
+
+    - name: Backend - Erzeuge Temporäre Enviorment Files
+      tags: backend,dascr
+      become: true
+      become_user: '{{ USER_DASCR }}' #Wechsel zum Dascr Nutzer
+      copy:
+        dest: '{{ item }}'
+        src: './Dateien/Backend/env'
+        mode: 0600
+      loop:
+        - '/home/{{ USER_DASCR }}/dascr-board/.env'
+        - '/home/{{ USER_DASCR }}/dascr-board/frontend/.env'
+      register: erstelleDascrEnv
+      when: not installiere_dascr_packete.failed #Nur ausführen wenn Dascr Nutzer erfolgreich erstellt
+
+    - name: Backend - Compiliere Dascr
+      tags: backend,dascr
+      become: true 
+      become_user: '{{ USER_DASCR }}' #Wechsel zum Dascr Nutzer
+      command:
+        chdir: '/home/{{ USER_DASCR }}/dascr-board/'
+        cmd: 'make {{ dascrPlatformMake }}'
+      register: compiliereDascrBackend
+
+    - name: Backend - Passe Verzeichnistruktur an
+      tags: backend,dascr,dascr
+      become: true 
+      become_user: '{{ USER_DASCR }}' #Wechsel zum Dascr Nutzer
+      shell: 'mv /home/{{ USER_DASCR }}/dascr-board/dist/* /home/{{ USER_DASCR }}/Dascr_Backend' #Verschiebe Compiliertes Verzeichnis ins Home Directory
+      register: moveDascrBackend
+      when: not compiliereDascrBackend.failed #Nur ausführen wenn Dascr erfolgreich Compiliert wurde
+
+    - name: Backend - Lösche überflüssige Verzeichnisse
+      tags: backend,cleanup,dascr
+      become: true 
+      file:
+        path: '/home/{{ USER_DASCR }}/dascr-board'
+        state: absent
+      register: loescheDascrUerberfluessig
+      when: not moveDascrBackend.failed #Nur ausführen wenn Dascr erfolgreich Verschoben wurde
+
+    - name: Backend - Lösche weitere überflüssige Verzeichnisse
+      tags: backend,cleanup,dascr
+      become: true 
+      file:
+        path: '/home/{{ USER_DASCR }}/go'
+        state: absent
+      when: not moveDascrBackend.failed #Nur ausführen wenn Dascr erfolgreich Verschoben wurde
+
+    - name: Backend - Passe Dascr Backend Berechtigungen an
+      tags: backend,permissions,dascr
+      become: true 
+      file:
+        path: '/home/{{ USER_DASCR }}/Dascr_Backend'
+        owner: '{{ USER_DASCR }}'
+        recurse: true #Auch für alle Unter-Dateien/Verzeichnisse setzen
+        mode: 0700 #Nur der Dascr Nutzer darf Lesen/Schreiben/ausführen
+      register: dascrPermissions
+      when: not moveDascrBackend.failed #Nur ausführen wenn Dascr erfolgreich Verschoben wurde
+
+    - name: Backend - Lade Dascr Datenbank hoch
+      tags: backend,dascr
+      become: true
+      become_user: '{{ USER_DASCR }}' #Wechsel zum Dascr Nutzer
+      copy:
+        dest: '/home/{{ USER_DASCR }}/Dascr_Backend/dascr.db'
+        src: './Dateien/Backend/dascr.db'
+        mode: 0777
+
+    - name: Backend - Erstelle uploads directory
+      tags: backend,dascr
+      become: true
+      become_user: '{{ USER_DASCR }}' #Wechsel zum Dascr Nutzer
+      file:
+        path: '/home/dascr/Dascr_Backend/uploads'
+        state: directory
+        owner: '{{ USER_DASCR }}'
+        mode: 0700
+
+    - name: Backend - Erzeuge Automatischen Dascr Backend Service
+      tags: backend,service,dascr
+      become: true
+      copy:
+        src: './Dateien/Backend/dascr-backend.service'
+        dest: '/etc/systemd/system/dascr-backend.service'
+        mode: 0700
+      register: dascrCreateService
+      when: not dascrPermissions.failed
+
+    - name: Backend - Reloade Systemd
+      tags: backend,service,dascr
+      systemd:
+        name: dascr-backend
+        daemon_reload: true
+        state: "started" #started den dascr_backend Service
+        enabled: true #Konfiguriert ein Autostart für den Service
+      register: dascrReloadSysmd
+      when: not dascrCreateService.failed
+
+#-------------------------------------------------------------------------------------------------------
+
+- name: Server - NGINX aufsetzen
+  hosts: Server
+  tasks:
+    - name: NGINX - Installiere NGINX
+      tags: nginx,packete
+      become: true
+      apt:
+        name:
+          - nginx
+      register: installiere_nginx
+
+    - name: Backend - Stoppe den NGINX
+      tags: nginx,service
+      systemd:
+        name: nginx
+        state: "stopped"
+
+    - name: NGINX - lege NGINX Nutzer an
+      tags: nginx,nutzer
+      become: true
+      user:
+        name: '{{ USER_NGINX }}'
+        shell: /bin/bash
+        state: present
+        create_home: true
+      register: create_NGINX_Nutzer
+
+
+    - name: NGINX - Lösche alte NGINX config
+      tags: nginx,cleanup
+      become: true
+      file:
+        path: '/etc/nginx/nginx.conf'
+        state: absent    
+
+    - name: NGINX - Die Nötige Verzeichnis Struktur aufbauen
+      tags: nginx
+      become: true
+      file:
+        path: "{{ item.path }}"
+        state: "{{ item.state }}"
+      loop:
+        - { path: '/etc/nginx/logs', state: 'directory' }
+        - { path: '/etc/nginx/certs', state: 'directory' }
+        - { path: '/etc/nginx/logs/error.log', state: 'touch' }
+        - { path: '/etc/nginx/logs/access.log', state: 'touch' }
+        - { path: '/etc/nginx/logs/api.log', state: 'touch' }
+
+    - name: NGINX - Kopiere Dateien auf Server
+      tags: nginx
+      become: true
+      copy:
+        src: '{{ item.src }}'
+        dest: '{{ item.dest }}'
+        owner: nginx
+        mode: 400 #Nur der Besitzer darf lesen
+        force: true
+      loop:
+        - { src: './Dateien/Nginx/cloudflare.key', dest: '/etc/nginx/certs/cloudflare.key' }
+        - { src: './Dateien/Nginx/cloudflare.pem', dest: '/etc/nginx/certs/cloudflare.pem' }
+        - { src: './Dateien/Nginx/nginx.conf', dest: '/etc/nginx/nginx.conf' }
+      when: not installiere_nginx.failed and not create_NGINX_Nutzer.failed
+
+
+    - name: NGINX - NGINX Nutzer die nötigen Berechtigungen geben
+      tags: nginx,permissions
+      become: true
+      file:
+        path: '/etc/nginx/'
+        owner: '{{ USER_NGINX }}'
+        recurse: true #Auch für alle Unter-Dateien/Verzeichnisse setzen
+        mode: 0500 #Nur der Nginx Nutzer darf Lesen und Ausführen
+
+    - name: Backend - Starte NGINX neu
+      tags: nginx,service
+      systemd:
+        name: nginx
+        daemon_reload: true
+        state: "started"
+        enabled: true 
+
+#-------------------------------------------------------------------------------------------------------
+
+- name: Server - Das Web-Frontend aufsetzen
+  hosts: Server
+  tasks:
+    - name: Frontend - Installiere Apache & PHP
+      tags: apache,packete
+      become: true
+      apt:
+        name:
+          - apache2
+          - php
+          - libapache2-mod-php
+      register: installiere_apache
+
+
+    - name: Frontend - Stoppe den Apache Webserver
+      tags: apache,service
+      systemd:
+        name: apache2
+        state: "stopped"
+
+    - name: Frontend - Aktiviere PHP für Apache
+      tags: apache,php,packete
+      command: a2enmod php8.2
+
+    - name: Frontend - Lösche alte Apache Dateien
+      tags: apache,cleanup
+      become: true
+      file:
+        path: 
+          - '/etc/apache2/apache2.conf'
+          - '/var/www/html/'
+          - '/etc/apache2/sites-available/000-default.conf'
+        state: absent  
+
+    - name: Frontend - Erstellen des Root Verzeichniss
+      tags: frontend, apache
+      become: true
+      file:
+        path: "/var/www/html"
+        state: directory
+        mode: 0755
+
+
+    - name: Frontend - Dateien auf Server kopieren
+      tags: frontend
+      copy:
+        src: ./Dateien/Frontend/Frontend_Verzeichniss/
+        dest: '/var/www/html'
+        owner: 'www-data'
+        mode: 0600
+
+    - name: Frontend - Kopiere neue Apache Konfig auf Server
+      tags: frontend,apache
+      become: true
+      copy:
+        src: './Dateien/Frontend/apache2.conf'
+        dest: '/etc/apache2/apache2.conf'
+
+    - name: Frontend - Kopiere neue Site Konfig auf Server
+      tags: frontend
+      become: true
+      copy:
+        src: './Dateien/Frontend/defaultSite.conf'
+        dest: '/etc/apache2/sites-available/000-default.conf'
+
+    - name: Frontend - Starte Apache neu
+      tags: apache,service
+      systemd:
+        name: apache2
+        daemon_reload: true
+        state: "started"
+        enabled: true
+
+#-------------------------------------------------------------------------------------------------------
+
+- name: Server - Absichern des Setups
+  hosts: Server
+  become: yes
+  tasks:
+    - name: Security - Verbiete Remote Login für alle Nutzer außer Root (Root hat nur login via SSH Keyfile)
+      tags: security,login
+      user:
+        name: "{{ item }}"
+        shell: /usr/sbin/nologin
+      loop:
+        - '{{ USER_DASCR }}'
+        - '{{ USER_NGINX }}'
+
+    - name: Security - installiere iptables
+      tags: security,packete
+      apt:
+        name: iptables
+
+    - name: Bestehende Verbindungen zulassen
+      tags: security,firewall
+      ansible.builtin.iptables:
+        chain: INPUT
+        ctstate: ESTABLISHED,RELATED
+        jump: ACCEPT
+
+    - name: Reinkommende verbindungen nur auf gegebene Ports zulassen
+      tags: security,firewall
+      ansible.builtin.iptables:
+        chain: INPUT
+        protocol: tcp
+        destination_port: '{{ item }}'
+        jump: ACCEPT
+      loop:
+        - 443
+        - 22
+
+    - name: Interne Verbindungen übers Loopback Interface zulassen
+      tags: security,firewall
+      ansible.builtin.iptables:
+        chain: INPUT
+        in_interface: lo
+        jump: ACCEPT
+
+    - name: ICMP Anfragen zu lassen
+      tags: security,firewal
+      ansible.builtin.iptables:
+        chain: INPUT
+        protocol: icmp
+        jump: ACCEPT
+
+    - name: Alle anderen Eingehenden Verbindungen Sperren
+      tags: security,firewall
+      ansible.builtin.iptables:
+        chain: INPUT
+        jump: DROP
+
+
+
+#-------------------------------------------------------------------------------------------------------
+
+
+
+- name: Raspberry Pi - Den Raspbery Pi aufsetzen
+  hosts: Raspi
+  tasks:
+    - name: PI - Installiere Nötige Pakete
+      tags: packete
+      become: true
+      apt:
+        name:
+          - python3
+          - python3-pip
+          - python3-pil
+          - python3-numpy
+          - build-essential
+          - git
+          - gcc
+          - scons
+          - swig
+          - make
+          - python3-serial
+
+    - name: Raspberry Pi - Lege dascr-Sensor auf Pi an
+      tags: dascr-Sensor,nutzer
+      become: true
+      user:
+        name: '{{ USER_PI }}'
+        groups: dialout
+        shell: /bin/bash
+        append: yes
+        state: present
+        create_home: true
+
+    - name: Raspberry Pi - Dateien auf Pi kopieren
+      tags: pi
+      copy:
+        src: ./Dateien/Pi/Files/
+        dest: '/home/{{ USER_PI }}'
+        owner: '{{ USER_PI }}'
+        mode: 0700
+
+
+    - name: Raspberry Pi - Python requirements installieren
+      ansible.builtin.pip:
+        name:
+          - rpi_ws281x
+          - rpi-lgpio
+          - evdev
+          - spidev
+        executable: pip3
+        extra_args: --break-system-packages
+
+    - name: Spi in Config aktivieren
+      tags: pi, spi
+      become: true
+      lineinfile:
+        path: /boot/firmware/config.txt
+        regexp: '^#?dtparam=spi='
+        line: 'dtparam=spi=on'
+        state: present
+
+    - name: Spi Modul laden
+      tags: pi, spi
+      become: true
+      lineinfile:
+        path: /etc/modules
+        line: 'spi-dev'
+        state: present
+
+
+
+    - name: Raspberry Pi - Erzeuge Automatischen Backend Service
+      tags: pi,service
+      become: true
+      copy:
+        src: './Dateien/Pi/raspy-dascr.service'
+        dest: '/etc/systemd/system/raspy-dascr.service'
+        mode: 0700
+      register: piCreateService
+
+    - name: Raspberry Pi - Reloade Systemd
+      tags: pi,service
+      become: true
+      systemd:
+        name: raspy-dascr
+        daemon_reload: true
+        state: "started"
+        enabled: true
+      when: not piCreateService.failed
+
+    - name: Pi Neustarten um Änderungen zu übernehmen
+      tags: pi,service, restart
+      become: true
+      reboot:
+        msg: "Neustart"
+        connect_timeout: 5
+        reboot_timeout: 300
+        pre_reboot_delay: 0
+        post_reboot_delay: 30
+
+
+

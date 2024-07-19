@@ -1,0 +1,5 @@
+[Server]
+root@10.0.80.1 USER_DASCR=dascr dascrPlatformMake="build-linux_64" USER_NGINX=nginx
+
+[Raspi]
+pi@10.0.10.53 USER_PI=pi
