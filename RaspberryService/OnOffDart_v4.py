@@ -9,7 +9,7 @@ import threading
 from threading import Lock
 import time
 from lcdSelect import lcdUserListSelect
-
+from laserCam import lineCheck
 
 
 ARDUINO_PORT:str = "/dev/ttyUSB0" #Der Port an welchem Der Arduino via USB angeschlossen ist
@@ -32,6 +32,11 @@ CHECK_GAME_UPDATE_INTERVAL_MIN:int = 2
 
 SHOW_GAME_INTERVALL:int = 3 #Das intervall in dem der Aktuelle Spielzustand auf der Konsole angezeigt werden soll
 
+'''
+Linienerkennung
+'''
+OVERSTEP_DURATION_THRESHOLD:int = 3 # Ansprechverzögerung der Übertritterkennung in Samples (Frames)
+CAM_FRAMERATE:int = 30 # Kamerabilder pro Sekunde
 
 
 LOCAL_GAME_UID:int = -1#Muss über Display ein gegeben werden
@@ -107,8 +112,15 @@ Wertet den Camera Feed aus, aka Führt die Bildereknneugn für die Linie aus, un
 nuzt die API funktionen 
 '''
 def evaluateCameraFeed():
-	#Todo: Implement
-	return
+	overstep_count: int = 0
+	while True:
+		if lineCheck() is False: # False, wenn Linie Übertreten
+			if overstep_count < OVERSTEP_DURATION_THRESHOLD:
+				overstep_count += 1
+		else:
+			overstep_count = 0
+		if getState() != 'UEBERTRITT' and overstep_count >= OVERSTEP_DURATION_THRESHOLD:
+			setState('UEBERTRITT')
 
 
 '''
@@ -701,7 +713,7 @@ def sendThrow(modifier: int, value: int):
 					logger.info(f'Sie hatten bereits 3 Würfe. Wechsel Spieler')
 					return
 			elif statusCode == 404: #Dürfte auch nicht eintreten, außer das Spiel wurde während des Spielablaufs gelöscht
-				logger.critical(f"{localPlayer.name} - Ihr Wurf: {modifier},{value}, konnte nicht übertragen werden, da das Spiel mit der UID: {uid}, nicht gefunden werden konnte. (Wurde vermutlich gelöscht/beendet)")
+				logger.critical(f"Ihr Wurf: {modifier},{value}, konnte nicht übertragen werden, da das Spiel mit der UID: {uid}, nicht gefunden werden konnte. (Wurde vermutlich gelöscht/beendet)")
 				return
 			else: #Unbekannter Fehler -> Ausgeben
 				logger.critical(f"Beim Übertragen des Wurfs ist ein unbekannter Fehler aufgetreten. Response Code: {statusCode}:{json.dumps(jsonResponse)}")
@@ -856,7 +868,7 @@ def showGame():
 	while True:
 		currentState:str = getState()
 		if currentState != 'NG' and currentState != 'INIT':
-			player:Player = getPlayer()
+			player:Spieler = getPlayer()
 			uid:int = getUID()
 			logger.info(f'Spiel: {uid} | Zustand: {currentState} - Lokaler Spieler: {player.name}. Runde: {player.totalThrowCount}. Score: {getPlayerScore(player)}. Gesammtwurfzahl: {player.totalThrowCount}. Average: {player.average}')			 
 		time.sleep(SHOW_GAME_INTERVALL)
@@ -1030,6 +1042,10 @@ def startSystem():
 		showGame_Thread = threading.Thread(target=showGame)#Gibt Regelmässig aktuelle Werte fürs Spiel aus
 		showGame_Thread.daemon = True
 		showGame_Thread.start()
+		
+		camera_Thread = threading.Thread(target=evaluateCameraFeed)
+		camera_Thread.daemon = True
+		camera_Thread.start()
 
 		arduCom_Thread = threading.Thread(target=arduinoSerialReceiver)
 		arduCom_Thread.daemon = True
