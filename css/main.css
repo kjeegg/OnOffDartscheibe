@@ -150,6 +150,13 @@ footer {
     color: var(--fh-mint);
     transition: 0.2s;
 }
+.navbar-own .js-a {
+    color: white;
+    text-decoration: none;
+    font-size: var(--base);
+    font-weight: 500;
+    cursor: pointer;
+}
 .nav-items {
     display: flex;
     justify-content: space-between;
@@ -275,4 +282,8 @@ input:checked + .slider:before {
 
 .slider.round:before {
   border-radius: 50%;
+}
+
+.modal-body {
+    color: black;
 }

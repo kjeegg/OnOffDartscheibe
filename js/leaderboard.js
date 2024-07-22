@@ -14,11 +14,11 @@ async function loadTopPlayers() {
         // display top 10 players
         const leaderboard = document.getElementById('leaderboard');
         leaderboard.innerHTML = '';
-        for (let i = 0; i < 10 && i < players.length; i++) {
+        for (let i = 1; i < 10 && i < players.length; i++) {
             const player = players[i];
             const playerElement = document.createElement('tr');
             playerElement.className = 'player';
-            playerElement.innerHTML = `<td class="number">${i}</td> <td class="name">${player.Name}</td> <td class="score">${player.Average}</td>`;
+            playerElement.innerHTML = `<td class="number">${i}</td> <td class="name">${player.Name}</td> <td class="score">${player.UID}</td>`;
             leaderboard.appendChild(playerElement);
         }
     } catch (error) {

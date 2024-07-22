@@ -3,9 +3,10 @@ const container = document.querySelector('.fireworks-container');
 const fireworks = new Fireworks.default(container);
 
 // Script Version
-console.log("Version: " + 0.2);
+console.log("Version: 0.2.1");
 
-let bustCanBeDisplayed = false;
+// See line 268
+// let bustCanBeDisplayed = false;
 
 async function loadGame() {
     const gameId = getGameId();
@@ -263,7 +264,8 @@ function bust(game, nocheckout = false) {
     }
     bustModal.show();
 }
-bustModal.on('hidden.bs.modal', bustCanBeDisplayed = false);
+//! This doesn't work because .on is only available for jQuery
+// bustModal.on('hidden.bs.modal', bustCanBeDisplayed = false);
 
 /* game buttons */
 async function skipTurn() {
