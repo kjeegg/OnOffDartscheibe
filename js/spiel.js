@@ -39,11 +39,15 @@ async function loadGame() {
             clearLast3Throws(game.ActivePlayer);
             bustCanBeDisplayed = true;
         }
+
+        //! This is faulty, not having it may actually be better
+        /*
         // Clear last throws if game just started
-        if (game.ThrowRound === 1) {
+        if (game.ThrowRound === 1 && game.Player[0].LastThrows.length === 3 && game.Player[1].LastThrows.length === 3 && game.GameState === "THROW") {
             clearLast3Throws(0);
             clearLast3Throws(1);
         }
+        */
 
         if (game.GameState === "BUST") {
             bust(game, false);
@@ -344,7 +348,7 @@ function displayWinner(game) {
     } else if(game.Player[1].Score?.Score === 0) {
         console.log('Winner: ' + game.Player[1].Name)
         document.getElementById('winner').textContent = game.Player[1].Name;
-        document.getElementById('player1-box').style.boxShadow = '0 0 100px 0px #00b1ac';
+        document.getElementById('player2-box').style.boxShadow = '0 0 100px 0px #00b1ac';
         winModal.show();
         document.querySelector('.fireworks-container').style.display = 'block';
         fireworks.start();

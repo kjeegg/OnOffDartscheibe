@@ -18,7 +18,7 @@ async function loadTopPlayers() {
             const player = players[i];
             const playerElement = document.createElement('tr');
             playerElement.className = 'player';
-            playerElement.innerHTML = `<td class="number">${i}</td> <td class="name">${player.Name}</td> <td class="score">${player.UID}</td>`;
+            playerElement.innerHTML = `<td class="number">${i}</td> <td class="name">${player.Name}</td> <td class="uid">${player.UID}</td>`;
             leaderboard.appendChild(playerElement);
         }
     } catch (error) {
