@@ -100,7 +100,8 @@ async function populateGameSelect() {
         const ongoingGames = games.filter(game => game.GameObject.Base.GameState !== 'WON' );
         const gameSelect = document.getElementById('joinGameSelect');
         gameSelect.innerHTML = ''; // Clear any existing options
-
+        
+        ongoingGames.sort((a, b) => b.uid - a.uid);
         ongoingGames.forEach(game => {
             const option = document.createElement('option');
             option.value = game.uid;
