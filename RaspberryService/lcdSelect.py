@@ -12,7 +12,7 @@ disp.bl_DutyCycle(100)  # Backlight at 100% brightness
 Schriftart = ImageFont.truetype("./Font/Font02.ttf", 32)
 
 # Rotary Encoder and Button GPIO pins
-clk_pin = 17
+clk_pin = 12
 dt_pin = 22
 sw_pin = 23
 

@@ -114,11 +114,13 @@ nuzt die API funktionen
 def evaluateCameraFeed():
 	overstep_count: int = 0
 	while True:
-		if lineCheck() is False: # False, wenn Linie Übertreten
+		if lineCheck(mode='any_in_column',thresh_quota=0.95, divisor_for_threshold=1.4) is False: # False, wenn Linie Übertreten
 			if overstep_count < OVERSTEP_DURATION_THRESHOLD:
 				overstep_count += 1
 		else:
 			overstep_count = 0
+			if getState() == 'UEBERTRITT':
+				setState(getPreviousState())
 		if getState() != 'UEBERTRITT' and overstep_count >= OVERSTEP_DURATION_THRESHOLD:
 			setState('UEBERTRITT')
 
@@ -133,18 +135,6 @@ def sendCameraFeed():
 
 
 #-----------------------------
-
-
-'''
-Verkabelung:
-	PI   	| 	LED
-	----------------- 
-	GND 	-> 	GND 
-	GPIO18	->	DIN
-	
-
-'''
-
 
 
 '''
@@ -565,9 +555,9 @@ Prüft ob eine Verbindung zur Onboard Kamera aufgebaut werden kann
 @return True, wenn ja, False wenn nein
 '''
 def checkCameraConnection() -> bool:
-	'''
-		TODO. Implement
-	'''
+
+	#initCamera()
+
 	return True
 
 '''

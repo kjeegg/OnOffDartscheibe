@@ -2,10 +2,10 @@ import numpy as np
 import cv2
 import time
 from picamera2 import Picamera2, Preview
-from libcamera import Transform
+from libcamera import Transform, controls
 
 # height of line in px
-h_line = 2
+#h_line = 2
 
 # Startwert, wird unten noch an den Maximalwert angepasst
 # threshold_red = 50
@@ -13,18 +13,41 @@ h_line = 2
 
 
 # Wo ist die Linie
-lineCoordinates = np.index_exp[625:630, 1070:1570]
+
+y_offset = 1260//2
+x_offset = 2140//2
+h_line = 12
+w_line = 1000//2
+# y_offset = 0
+# x_offset = 0
+# h_line = 20
+# w_line = 1000
+framecount = 0
+
+
+lineCoordinates = np.index_exp[y_offset:(y_offset+h_line), x_offset:(x_offset+w_line)]
+#lineCoordinates = np.index_exp[620:635, 1070:1570]
 #lineCoordinates = np.index_exp[650:660,1000:1600]
 
 #Testbild laden
 #frame = cv2.imread("D:/Dart-IP/test_tesafilm_cam2_7.jpg")
 #frame = cv2.imread("D:/Dart-IP/testklein2.jpg")
-
+#def initCamera() -> Picamera2:
 picam = Picamera2()
-config = picam.create_preview_configuration(main={"size": (2304, 1296)})
+#config = picam.create_still_configuration(main={"size": (4608, 2592)})
+config = picam.create_video_configuration(main={"size": (2304, 1296)})
+picam.align_configuration(config)
 picam.configure(config)
+picam.set_controls({"AfMetering":controls.AfMeteringEnum.Windows})
+picam.set_controls({"AfWindows":[(x_offset,y_offset,w_line,h_line)]}) # A list of rectangles (tuples of 4 numbers denoting x_offset, y_offset, width and height). The rectangle units refer to the maximum scaler crop window (please refer to the ScalerCropMaximum value in the camera_properties property).
+picam.set_controls({"AeMeteringMode": controls.AeMeteringModeEnum.Spot})
 picam.start(show_preview=True)
-
+'''
+with picam.controls as controls:
+    controls.ExposureTime = 10000
+    controls.AnalogueGain = 1.0
+'''
+#    return picam
 
 #time.sleep(2)
 def lineCheck(mode: str = 'full_frame', thresh_quota: float = 0.9, divisor_for_threshold: float = 1.25) -> bool:
@@ -38,23 +61,32 @@ def lineCheck(mode: str = 'full_frame', thresh_quota: float = 0.9, divisor_for_t
     returns:
     True if the line is intact (player did not step over), otherwise False
     """
+    #picam = initCamera()
+    global frame_red_line_only
+    global framecount
     frame = picam.capture_array()  # aktuelles Bild aus dem picam-Buffer abrufen
     frame_red = frame[:, :, 0]  # Picam speichert RGB, dritter Index = 0 ist der Rot-Kanal
     frame_red_line_only = frame_red[lineCoordinates]  # auf vorgegebenes Linien-Rechteck zuschneiden
     #index_max_red_per_column = frame_red_line_only.argmax(0) # Index des Maximalwertes entlang Axis 0 (oben-unten)
     #value_max_red_per_column = frame_red_line_only.max(0) # Maximalwert entlang Axis 0 (oben-unten), array mit <Breite> Werten
-    reference_red = np.percentile(frame_red_line_only, 95)
+    #reference_red = np.percentile(frame_red_line_only, 95)
+    reference_red = np.max(frame_red_line_only)
+#    print('reference_red=')
+#    print(reference_red)
     threshold_red = reference_red // divisor_for_threshold  # "//" dividiert und rundet auf int ab
     filterframe_red = frame_red_line_only > threshold_red  # ergibt für jeden Pixel True oder False
 
-    if mode is 'any_in_column':
+    if mode == 'any_in_column':
         # einer der Pixel dieser Spalte ist hell genug (= hat Linie)?
         column_has_line = np.any(filterframe_red, axis=0)
     else:
         column_has_line = filterframe_red
     lineQuota = np.sum(column_has_line) / np.size(column_has_line)
-    print(f"{lineQuota} liegen über {threshold_red}/255 Rotwert")
-
+    cv2.imshow("frame_red_line_only", frame_red_line_only)
+    framecount += 1
+    if framecount >=100:
+        print(f"{lineQuota} liegen über {threshold_red}/255 Rotwert")
+        framecount = 0
     if lineQuota > thresh_quota:
         return True
     else:
@@ -62,11 +94,14 @@ def lineCheck(mode: str = 'full_frame', thresh_quota: float = 0.9, divisor_for_t
 
 
 def oldSandbox():
+    """Remnants of messing around ("experimenting") with the system. Just Ignore.
+    I might still want to use parts though, so keep for now.
+    """
     #while True:
-    for framecount in range(5):
+    for framecount in range(1):
         frame = picam.capture_array()
         frame_red = frame[:, :, 0]
-        cv2.imwrite("deckenlicht%d.jpg" % framecount, frame)
+        cv2.imwrite("beleuchtung.jpg", cv2.cvtColor(frame,cv2.COLOR_RGB2BGR))
         thresh_quota = 0.9
         divisor_for_threshold = 1.2
         #print(frame)
@@ -95,10 +130,11 @@ def oldSandbox():
         '''
         print("Maximum an x=")
         print(index_max_red)
+        '''
         print("Betrag des Maximums")
-    '''
+    
         maxvalue_per_column = frame_red.max(0)
-        #print(frame_red.max(0))
+        print(frame_red.max(0))
         #huemap = hsv[:,:,0]
         #print(hsv)
 
@@ -172,13 +208,13 @@ def oldSandbox():
         #print (frame_red)
         '''
         """
-        cv2.imshow("frame_red", frame_red)
+        cv2.imshow("frame_red_line_only", frame_red_line_only)
         #k = cv2.waitKey(0) # Wait for a keystroke in the window
-        if (cv2.waitKey(200) & 0xFF) == ord('q'):
+        if (cv2.waitKey(1000) & 0xFF) == ord('q'):
             break
 
     # release camera
-    picam.stop()
+    #picam.stop()
 
     # Idee, die leider nur mit ununterbrochener, guter Linie funktioniert
     # links senkrecht nach sehr roter Zone suchen
@@ -188,9 +224,15 @@ def oldSandbox():
     # Mitte zu Mitte Bresenham und prüfen, ob Linie durchgängig
     # sprich: Linie verfolgen und abspeichern, wie viele Pixel nicht rot sind.
     # Wenn rechts angekommen und <Schwellwert, ist die Linie durchgängig
+'''
+while True:
+    lineCheck(mode='any_in_column')
+    cv2.imshow("frame_red_line_only", frame_red_line_only)
+    oldSandbox()
+    #k = cv2.waitKey(0) # Wait for a keystroke in the window
+    if (cv2.waitKey(1000) & 0xFF) == ord('q'):
+        picam.stop()
+        break
+    
 
-    # Close device (opencv)
-    #video_capture.release()
-
-# Press the green button in the gutter to run the script.
-#if __name__ == '__main__':
+'''
