@@ -74,7 +74,7 @@ document.getElementById('createGameForm').addEventListener('submit', async funct
         const data = await response.json();
         window.location.href = `spiel.html?gameId=${newGameId}`;
     } catch (error) {
-        alert('Fehler beim Erstellen des Spiels: ' + error.message);
+        alert('Fehler beim Erstellen des Spiels');
     }
 });
 
@@ -98,7 +98,7 @@ document.getElementById('joinGameForm').addEventListener('submit', async functio
         const data = await response.json();
         window.location.href = `spiel.html?gameId=${gameId}`;
     } catch (error) {
-        alert('Fehler beim Beitreten des Spiels: ' + error.message);
+        alert('Spiel existiert nicht');
     }
 });
 
