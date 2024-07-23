@@ -61,26 +61,29 @@
     </div>
 </div>
 
-<!-- Join Game Modal -->
-<div class="modal fade" id="joinGameModal" tabindex="-1" aria-labelledby="joinGameModalLabel" aria-hidden="true">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="text-dark modal-title" id="joinGameModalLabel">Spiel beitreten</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                <form id="joinGameForm">
-                    <div class="mb-3">
-                        <label for="joinGameId" class="text-dark form-label">Spiel-ID</label>
-                        <input type="text" class="form-control" id="joinGameId" required>
-                    </div>
-                    <button type="submit" class="btn btn-primary">Beitreten</button>
-                </form>
+    <!-- Join Game Modal -->
+    <div class="modal fade" id="joinGameModal" tabindex="-1" aria-labelledby="joinGameModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="text-dark modal-title" id="joinGameModalLabel">Spiel beitreten</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="joinGameForm">
+                        <div class="mb-3">
+                            <label for="joinGameSelect" class="text-dark form-label">Spiel auswählen</label>
+                            <select class="form-control" id="joinGameSelect" required>
+                                <!-- Options will be populated by JavaScript -->
+                            </select>
+                        </div>
+                        <button type="submit" class="btn btn-primary">Beitreten</button>
+                    </form>
+                </div>
             </div>
         </div>
     </div>
-</div>
+
 
 <!-- Add Player Modal -->
 <div class="modal fade" id="addPlayerModal" tabindex="-1" aria-labelledby="addPlayerModalLabel" aria-hidden="true">

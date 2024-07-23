@@ -79,9 +79,43 @@ document.getElementById('createGameForm').addEventListener('submit', async funct
 });
 
 // Join game
+document.addEventListener('DOMContentLoaded', async function() {
+    await populateGameSelect();
+});
+
+async function populateGameSelect() {
+    try {
+        const response = await fetch('api.php?apiFunction=getAllGames', {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        });
+
+        if (!response.ok) {
+            throw new Error('Network response was not ok');
+        }
+
+        const games = await response.json();
+        const ongoingGames = games.filter(game => game.GameObject.Base.GameState !== 'WON' );
+        const gameSelect = document.getElementById('joinGameSelect');
+        gameSelect.innerHTML = ''; // Clear any existing options
+
+        ongoingGames.forEach(game => {
+            const option = document.createElement('option');
+            option.value = game.uid;
+            option.text = `Game ID: ${game.uid} - Players: ${game.GameObject.Base.Player.map(player => player.Name).join(', ')}`;
+            gameSelect.appendChild(option);
+        });
+    } catch (error) {
+        console.error('Fehler beim Laden der Spiele:', error);
+        alert('Fehler beim Laden der Spiele: ' + error.message);
+    }
+}
+
 document.getElementById('joinGameForm').addEventListener('submit', async function(event) {
     event.preventDefault();
-    const gameId = document.getElementById('joinGameId').value;
+    const gameId = document.getElementById('joinGameSelect').value;
 
     try {
         const response = await fetch(`api.php?apiFunction=getGame&gameId=${gameId}`, {
@@ -101,6 +135,7 @@ document.getElementById('joinGameForm').addEventListener('submit', async functio
         alert('Spiel existiert nicht');
     }
 });
+
 
 // Login
 document.getElementById('loginForm').addEventListener('submit', function(event) {
