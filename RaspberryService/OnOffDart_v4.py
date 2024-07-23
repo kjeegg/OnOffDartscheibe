@@ -1,5 +1,4 @@
-#!/usr/bin/python3
-
+from turtle import color
 import serial
 import requests
 from requests.packages.urllib3.exceptions import InsecureRequestWarning
@@ -10,13 +9,20 @@ from threading import Lock
 import time
 from lcdSelect import lcdUserListSelect
 from laserCam import lineCheck
+from rpi_ws281x import PixelStrip, Color
+from led_animations import *
+import argparse
 
+#die sind neu
+import board
+import busio
+import neopixel_spi as neopixel
 
 ARDUINO_PORT:str = "/dev/ttyUSB0" #Der Port an welchem Der Arduino via USB angeschlossen ist
 BAUD_RATE:int = 9600 #Die Baud Rate für die Arduino-USB-Serial Verbindnung
 SERIAL_TIMEOUT:int = 3#Der Maximal zulässige Tiemout für die Serielle Verbindung
 
-API_SERVER_DOMAIN:str = "https://api.onoff-dart.de/api"#Die Domain des API-Servers
+API_SERVER_DOMAIN:str = "https://api.onoff-dart.de/api" #Die Domain des API-Servers
 
 THREAD_CHECK_INTERVAL:int = 5 # Prüfe alle X Sekunden ob noch alle Threads laufen oder iwo probleme aufgetreten sind, versuche bei Problemen neu zu starten
 
@@ -42,9 +48,37 @@ CAM_FRAMERATE:int = 30 # Kamerabilder pro Sekunde
 LOCAL_GAME_UID:int = -1#Muss über Display ein gegeben werden
 LOCAL_PLAYER_UID:int = -1#Wird auch übers Display eingestellt
 
+#---------------------------------
 
+PREVIOUS_STATE:str = 'INIT' #Der Vorherige Zustand des Automaten (bei start INIT) (für zustände+übergaänge siehe Zustandsdiagram in Dokumentation)
+PREVIOUS_STATE_LOCK = Lock()
+CURRENT_STATE:str = 'INIT' #Der Aktuelle Zustand des Automaten (bei start INIT) (für zustände+übergaänge siehe Zustandsdiagram in Dokumentation)
+CURRENT_STATE_LOCK = Lock()
 
+MIN_ALLOWED_DELAY = 0.45
 
+SPIEL = None#Speichert das aktuellste Spielupdate
+SPIEL_LOCK = Lock()
+LOKAL_PLAYER = None
+LOKAL_PLAYER_LOCK = Lock()
+
+# LED strip configuration:
+NUM_PIXELS = 80        # Number of LED pixels.
+PIXEL_ORDER = neopixel.GRB
+LED_PIN = 13          # GPIO pin connected to the pixels (18 uses PWM!).
+# LED_PIN = 10        # GPIO pin connected to the pixels (10 uses SPI /dev/spidev0.0).
+LED_FREQ_HZ = 800000  # LED signal frequency in hertz (usually 800khz)
+LED_DMA = 10          # DMA channel to use for generating signal (try 10)
+LED_BRIGHTNESS = 1.0  # Set to 0 for darkest and 255 for brightest
+LED_INVERT = False    # True to invert the signal (when using NPN transistor level shift)
+LED_CHANNEL = 1       # set to '1' for GPIOs 13, 19, 41, 45 or 53
+
+spi = busio.SPI(MOSI=board.MOSI_1, clock=board.SCK_1)
+strip = neopixel.NeoPixel_SPI(
+    spi, NUM_PIXELS, pixel_order=PIXEL_ORDER, auto_write=False
+)
+
+LEDRESET_EVENT = threading.Event()
 
 
 #-----------------------------
@@ -138,6 +172,39 @@ def sendCameraFeed():
 
 
 '''
+Verkabelung:
+	PI   	| 	LED
+	----------------- 
+	GND 	-> 	GND 
+	GPIO18	->	DIN
+	
+
+'''
+
+STATE_WAS_SET = False
+
+def LEDController():
+	global STATE_WAS_SET
+	while True:
+		if STATE_WAS_SET == True:
+			logger.info("Entered state changer")
+			reset_LED()
+			time.sleep(0.1)
+			restart_reset_event_listener()
+			#reset_LED()
+			state=getState()
+			if state == 'UEBERTRITT' or state == 'OTHER_PLAYER': #Spieler darf NICHT WERFEN
+				showNotReady()
+			elif state == 'INIT' or state == 'THROW_1': #Spieler darf Werfen
+				showReadyFirstTime()
+			elif state == 'THROW_2' or state == 'THROW_3':
+				showReady()
+			elif state == 'CLAMPING':
+				showClamping()
+
+			STATE_WAS_SET = False
+
+'''
 Schaltet den angeschlossenden LED Strip
 '''
 def enableLEDs():
@@ -149,6 +216,7 @@ def enableLEDs():
 Zeigt dem Spieler an das er/sie Verloren hat
 '''
 def showLoose():
+	reset_LED()
 	'''
 	TODO:
 		implement. soll später via leds anzeigen, aktuell Placeholder mit einfacher Text ausgabe
@@ -161,6 +229,8 @@ def showLoose():
 Zeigt dem Spieler an das er/sie Gewonnen hat
 '''
 def showWin():
+	reset_LED()
+
 	'''
 	TODO:
 		implement. soll später via leds anzeigen, aktuell Placeholder mit einfacher Text ausgabe
@@ -174,11 +244,19 @@ def showWin():
 Zeigt dem Spieler an das er/sie nicht werfen darf
 '''
 def showNotReady():
-	'''
-	TODO:
-		implement. soll später via leds anzeigen, aktuell Placeholder mit einfacher Text ausgabe
-	'''
+	reset_LED()
+	notReady(strip)
+
 	print("PLACEHOLDER: Sie dürfen NICHT werfen")
+	return
+
+
+'''
+Wird angezeigt vor dem ersten Wurf
+'''
+def showReadyFirstTime():
+	reset_LED()
+	readyFirstTime(strip,3)
 	return
 
 
@@ -186,14 +264,26 @@ def showNotReady():
 Zeigt dem Spieler an das er/sie werfen darf
 '''
 def showReady():
-	'''
-	TODO:
-		implement. soll später via leds anzeigen, aktuell Placeholder mit einfacher Text ausgabe
-	'''
+	reset_LED()
+	ready(strip)
+
 	print("PLACEHOLDER: Sie dürfen werfen")
 	return
 
 
+def showPlayerHit():
+	reset_LED()
+	playerHit(strip)
+	return
+
+def showPlayerMissed():
+	reset_LED()
+	playerMissed(strip)
+	return
+
+def showClamping():
+	reset_LED()
+	clamping(strip)
 #-----------------------------
 
 class Spieler:
@@ -456,6 +546,7 @@ Setzt den lokalen State des aktuellen Spiels
 '''
 def setState(state: str):
 	global CURRENT_STATE, CURRENT_STATE_LOCK, PREVIOUS_STATE, PREVIOUS_STATE_LOCK
+	global STATE_WAS_SET
 	CURRENT_STATE_LOCK.acquire()
 	temp = CURRENT_STATE
 	CURRENT_STATE = state
@@ -463,12 +554,12 @@ def setState(state: str):
 	PREVIOUS_STATE_LOCK.acquire()
 	PREVIOUS_STATE = temp
 	PREVIOUS_STATE_LOCK.release()
-	if state == 'UEBERTRITT' or state == 'OTHER_PLAYER': #Spieler darf NICHT WERFEN
-		showNotReady()
-	elif state == 'INIT' or state == 'THROW_1' or state == 'THROW_2' or state == 'THROW_3':#Spieler darf Werfen
-		showReady() 
 	logger.debug(f"Zustandswechsel: Vorheriger Zustand: {temp}, neuer Zustand: {state}")
-	return 
+	#LEDRESET_EVENT.set()
+
+	#restart_reset_event_listener()
+	STATE_WAS_SET = True
+	return
 
 
 '''
@@ -659,11 +750,15 @@ def sendThrow(modifier: int, value: int):
 		return
 
 	if state == 'THROW_1' or state == 'THROW_2' or state == 'THROW_3':
+		if value == 0:
+			showPlayerMissed()
+		else:
+			showPlayerHit()
+
 		uid:int = getUID()
 		statusCode, jsonResponse = pushThrowToAPI(uid, modifier, value)#Schickt den Wurf an die API		
 		if statusCode != None: #Keine Verbindungsprobleme, bei Problemen wird Fehler woanders ausgegeben
 			if statusCode == 200: #Keine Probleme, Übertragung hat funktioniert
-
 				newState:str = getNextThrowState(state) #Placeholder
 				if newState == None:#Tritt nur ein wenn ein ungültiger State vorlag (kann eigentlich nicht hier eintreten, außer race condition)
 					return
@@ -709,18 +804,18 @@ def sendThrow(modifier: int, value: int):
 				logger.critical(f"Beim Übertragen des Wurfs ist ein unbekannter Fehler aufgetreten. Response Code: {statusCode}:{json.dumps(jsonResponse)}")
 				return
 
-		if state == 'OTHER_PLAYER':
-			logger.warning(f"Es wurde ein Wurf festgestellt, aber der andere Spieler ist dran. Verwerfe Wurf")
-			return
+	if state == 'OTHER_PLAYER':
+		logger.warning(f"Es wurde ein Wurf festgestellt, aber der andere Spieler ist dran. Verwerfe Wurf")
+		return
 
 
-		if state == 'UEBERTRITT':
-			logger.warning(f"Es wurde ein Wurf festgestellt, da sie aber übertreten haben, wird dieser verworfen")
-			return
+	if state == 'UEBERTRITT':
+		logger.warning(f"Es wurde ein Wurf festgestellt, da sie aber übertreten haben, wird dieser verworfen")
+		return
 
-		if state == 'WIN':
-			logger.warning(f"Es wurde ein Wurf festgestellt. Aber das Spiel ist bereits abgeschlossen. Verwerfe Wurf")
-			return
+	if state == 'WIN':
+		logger.warning(f"Es wurde ein Wurf festgestellt. Aber das Spiel ist bereits abgeschlossen. Verwerfe Wurf")
+		return
 
 
 '''
@@ -755,6 +850,21 @@ Und behandelt die erhaltenen Daten entsprechend.
 @param arduinoMsg die auszuwertende Nachricht
 '''
 def computeArduinoMsg(arduinoMsg: str):
+	# Klemm-Erkennung
+	global lastArduinoMsgTime
+
+	newArduinoMsgTime = time.time()
+	if newArduinoMsgTime - lastArduinoMsgTime < MIN_ALLOWED_DELAY:
+		logger.critical("Zu öfte Arduino nachrichten!")
+		setState('CLAMPING')
+		#showClamping()
+		lastArduinoMsgTime = time.time()
+		return
+
+	if getState() == 'CLAMPING':
+		setState(getPreviousState())
+
+
 	modifier = value =  -1 #Init beide Werte mit nem Placeholder Wert
 	nachrichtValidity:[bool,bool] = checkArduinoMsgValidity(arduinoMsg)
 	if(nachrichtValidity[0] == True):# Es wird nur auf valide Nachrichten reagiert
@@ -765,6 +875,7 @@ def computeArduinoMsg(arduinoMsg: str):
 			modifier = value = 0
 		uid:int = getUID()
 		sendThrow(modifier, value)
+		lastArduinoMsgTime = time.time()
 		return
 
 
@@ -843,6 +954,34 @@ def checkGameStateChanges(latestGame: Spiel):
 					return
 			else: #Wir haben Übertreten Wissen aber nichtmal wer wir sind -> Egal
 				return
+
+
+
+		#if curState == 'THROW_1' or curState == 'THROW_2' or curState == 'THROW_3': #Wir sind dran und können Werfen
+			#rundenWuerfe:int = len(aktPlayer.lastThrows) #Die anzahl an bisherigen Würfen des Aktiven Spielrs für die aktuelle Runde
+			#newState = None
+			#match rundenWuerfe:
+				#case 0:
+					#newState = 'THROW_1'
+				#case 1:
+					#newState = 'THROW_2'
+				#case 2:
+					#newState = 'THROW_3'
+				#case 3: #Wir hatten alle Würfe, haben aber noch nicht gewechselt
+					#newState = 'OTHER_PLAYER'
+			#if newState != curState: #Wenn eine Diskrpanz zwischen den Gespeicherten Würfen und den Loaklem Wurfstate vorliegt
+				#setState(newState)#Ändere den Zustand
+				#logger.warning(f"Externes Update: Diskrepanz bei den Würfen festgestellt: {newState}. Zustand Vorher: {curState}.")
+			#return;
+#
+#
+		#if curState == 'OTHER_PLAYER':
+			#if aktPlayer.uid == localPlayer.uid: #Aktiver Spieler sind wieder wir (aka anderer Spieler ist fertig) -> Spielerwechsel hat stattgefunden
+				#setState('THROW_1')#Wechsel Zustand
+				#logger.info(f"Der andere Spieler ist fertig. Nun bitte werfen")
+				#return
+			#else: #Der andere Spieler ist noch nicht fertig -> warten
+				#return
 
 
 
@@ -1037,6 +1176,12 @@ def startSystem():
 		camera_Thread.daemon = True
 		camera_Thread.start()
 
+		LEDControl_Thread = threading.Thread(target=LEDController)
+		LEDControl_Thread.daemon = True
+		LEDControl_Thread.start()
+
+		global lastArduinoMsgTime
+		lastArduinoMsgTime = time.time()
 		arduCom_Thread = threading.Thread(target=arduinoSerialReceiver)
 		arduCom_Thread.daemon = True
 		arduCom_Thread.start()
