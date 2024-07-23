@@ -52,15 +52,26 @@ async function populatePlayerSelects() {
         player1Select.innerHTML = ''; // Clear any existing options
         player2Select.innerHTML = ''; // Clear any existing options
 
+        let playerList = [];
         players.forEach(player => {
+            playerList.push(player);
+        });
+
+        playerList.reverse();
+
+        // Add placeholder option using insertAdjacentHTML
+        player1Select.insertAdjacentHTML('afterbegin', '<option value="" selected disabled>Select Player 1</option>');
+        player2Select.insertAdjacentHTML('afterbegin', '<option value="" selected disabled>Select Player 2</option>');
+
+        playerList.forEach(player => {
             const option1 = document.createElement('option');
             option1.value = player.UID;
-            option1.text = `${player.Name} (${player.Nickname})`;
+            option1.text = `${player.Name} - UID: ${player.UID}`;
             player1Select.appendChild(option1);
 
             const option2 = document.createElement('option');
             option2.value = player.UID;
-            option2.text = `${player.Name} (${player.Nickname})`;
+            option2.text = `${player.Name} - UID: ${player.UID}`;
             player2Select.appendChild(option2);
         });
     } catch (error) {
@@ -145,7 +156,7 @@ async function populateGameSelect() {
         ongoingGames.forEach(game => {
             const option = document.createElement('option');
             option.value = game.uid;
-            option.text = `Game ID: ${game.uid} - Players: ${game.GameObject.Base.Player.map(player => player.Name).join(', ')}`;
+            option.text = `${game.uid} - ${game.GameObject.Base.Player.map(player => player.Name).join(' vs. ')}`;
             gameSelect.appendChild(option);
         });
     } catch (error) {
