@@ -28,6 +28,46 @@ async function getHighestGameUID() {
     }
 }
 
+document.addEventListener('DOMContentLoaded', async function() {
+    await populatePlayerSelects();
+});
+
+async function populatePlayerSelects() {
+    try {
+        const response = await fetch('api.php?apiFunction=getTopPlayers', {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        });
+
+        if (!response.ok) {
+            throw new Error('Network response was not ok');
+        }
+
+        const players = await response.json();
+        const player1Select = document.getElementById('player1Id');
+        const player2Select = document.getElementById('player2Id');
+
+        player1Select.innerHTML = ''; // Clear any existing options
+        player2Select.innerHTML = ''; // Clear any existing options
+
+        players.forEach(player => {
+            const option1 = document.createElement('option');
+            option1.value = player.UID;
+            option1.text = `${player.Name} (${player.Nickname})`;
+            player1Select.appendChild(option1);
+
+            const option2 = document.createElement('option');
+            option2.value = player.UID;
+            option2.text = `${player.Name} (${player.Nickname})`;
+            player2Select.appendChild(option2);
+        });
+    } catch (error) {
+        console.error('Fehler beim Laden der Spieler:', error);
+        alert('Fehler beim Laden der Spieler: ' + error.message);
+    }
+}
 // New game
 document.getElementById('createGameForm').addEventListener('submit', async function(event) {
     event.preventDefault();
