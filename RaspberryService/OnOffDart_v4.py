@@ -1,3 +1,5 @@
+#!/usr/bin/python3
+
 from turtle import color
 import serial
 import requests
