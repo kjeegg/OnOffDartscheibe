@@ -13,15 +13,25 @@ from libcamera import Transform, controls
 
 
 # Wo ist die Linie
+# Richtiges auskommentieren
 
-y_offset = 1260//2
-x_offset = 2140//2
-h_line = 12
-w_line = 1000//2
-# y_offset = 0
-# x_offset = 0
-# h_line = 20
-# w_line = 1000
+
+# Scheibe 1
+'''
+y_offset = 575
+x_offset = 1020
+h_line = 7
+w_line =700
+'''
+
+# Scheibe 2
+'''
+y_offset = 613
+x_offset = 1000
+h_line = 6
+w_line = 650
+'''
+
 framecount = 0
 
 
