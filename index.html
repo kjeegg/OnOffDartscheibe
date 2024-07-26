@@ -46,6 +46,29 @@
                 </div>
                 <div class="modal-body">
                     <form id="createGameForm">
+                        <label class="text-dark form-label">Spielmodus</label>
+                        <div class="mb-3 ms-2 d-flex">
+                            <div class="w-50 d-inline">
+                                <div class="form-check ml-3">
+                                    <input type="radio" name="variantRadio" class="form-check-input" id="use301Variant"></input>
+                                    <label for="use301Variant" class="form-check-label">301</label>
+                                </div>
+                                <div class="form-check ml-3">
+                                    <input type="radio" name="variantRadio" class="form-check-input" id="use501Variant" checked></input>
+                                    <label for="use501Variant" class="form-check-label">501</label>
+                                </div>
+                            </div>
+                            <div class="w-50 d-inline">
+                                <div class="form-check ml-3">
+                                    <input type="radio" name="outRadio" class="form-check-input" id="useSingleOut"></input>
+                                    <label for="useSingleOut" class="form-check-label">Single Out</label>
+                                </div>
+                                <div class="form-check ml-3">
+                                    <input type="radio" name="outRadio" class="form-check-input" id="useDoubleOut" checked></input>
+                                    <label for="useDoubleOut" class="form-check-label">Double Out</label>
+                                </div>
+                            </div>
+                        </div>
                         <div class="mb-3">
                             <label for="player1Id" class="text-dark form-label">Spieler 1</label>
                             <select class="form-control" id="player1Id" required>

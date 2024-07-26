@@ -23,7 +23,7 @@ async function getHighestGameUID() {
         return highestUID;
     } catch (error) {
         console.error('Fehler beim Laden der Spiele:', error);
-        alert('Fehler beim Laden der Spiele: ' + error.message);
+        // ('Fehler beim Laden der Spiele: ' + error.message);
         return null;
     }
 }
@@ -75,7 +75,7 @@ async function populatePlayerSelects() {
         });
     } catch (error) {
         console.error('Fehler beim Laden der Spieler:', error);
-        alert('Fehler beim Laden der Spieler: ' + error.message);
+        // ('Fehler beim Laden der Spieler: ' + error.message);
     }
 }
 // New game
@@ -85,8 +85,19 @@ document.getElementById('createGameForm').addEventListener('submit', async funct
 
     // should not happen, highestUID is 0 if no games exist
     if (highestUID === null) {
-        alert('Fehler beim Erstellen des neuen Spiels');
+        ('Fehler beim Erstellen des neuen Spiels');
         return;
+    }
+
+    // default values for variant and out
+    const gameVariant = "501";
+    const out = "double";
+
+    if (document.getElementById('useSingleOut').checked) {
+        out = "single"
+    }
+    if (document.getElementById('use301Variant').checked) {
+        gameVariant = "301"
     }
 
     const newGameId = String(parseInt(highestUID) + 1);
@@ -98,9 +109,9 @@ document.getElementById('createGameForm').addEventListener('submit', async funct
         "uid": newGameId,
         "player": [player1Id, player2Id],
         "game": "x01",
-        "variant": "501",
+        "variant": gameVariant,
         "in": "straight",
-        "out": "double",
+        "out": out,
         "sound": true,
         "podium": false,
         "autoswitch": false,
@@ -124,7 +135,7 @@ document.getElementById('createGameForm').addEventListener('submit', async funct
         const data = await response.json();
         window.location.href = `spiel.html?gameId=${newGameId}`;
     } catch (error) {
-        alert('Fehler beim Erstellen des Spiels');
+        ('Fehler beim Erstellen des Spiels');
     }
 });
 
@@ -163,7 +174,7 @@ async function populateGameSelect() {
         });
     } catch (error) {
         console.error('Fehler beim Laden der Spiele:', error);
-        alert('Fehler beim Laden der Spiele: ' + error.message);
+        // ('Fehler beim Laden der Spiele: ' + error.message);
     }
 }
 
@@ -186,7 +197,7 @@ document.getElementById('joinGameForm').addEventListener('submit', async functio
         const data = await response.json();
         window.location.href = `spiel.html?gameId=${gameId}`;
     } catch (error) {
-        alert('Spiel existiert nicht');
+        ('Spiel existiert nicht');
     }
 });
 
@@ -201,7 +212,7 @@ document.getElementById('loginForm').addEventListener('submit', function(event) 
     if (username === 'admin' && password === 'admin123') {
         window.location.href = 'admin.html';
     } else {
-        alert('Falscher Benutzername oder Passwort');
+        ('Falscher Benutzername oder Passwort');
     }
 });
 
@@ -230,11 +241,11 @@ document.getElementById('addPlayerForm').addEventListener('submit', async functi
         }
 
         const data = await response.json();
-        alert('Spieler ID: ' + data.UID);
+        ('Spieler ID: ' + data.UID);
         console.log(data.UID);
         document.getElementById('addPlayerForm').reset();
     } catch (error) {
-        alert('Fehler beim Hinzufügen des Spielers: ' + error.message);
+        ('Fehler beim Hinzufügen des Spielers: ' + error.message);
     }
 });
 
