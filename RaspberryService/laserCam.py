@@ -25,12 +25,13 @@ w_line =700
 '''
 
 # Scheibe 2
-'''
+
 y_offset = 613
 x_offset = 1000
 h_line = 6
 w_line = 650
-'''
+
+windowFrame = 30
 
 framecount = 0
 PICAM_FRAMERATE = 30
@@ -67,7 +68,7 @@ with picam.controls as controls:
 #    return picam
 
 #time.sleep(2)
-def lineCheck(mode: str = 'full_frame', thresh_quota: float = 0.95, divisor_for_threshold: float = 1.25) -> bool:
+def lineCheck(mode: str = 'full_frame', thresh_quota: float = 0.95, divisor_for_threshold: float = 1.25, algorithm: str = 'count') -> bool:
     """Check camera feed for intact red line at given position in the picture
 
     arguments:
@@ -82,32 +83,41 @@ def lineCheck(mode: str = 'full_frame', thresh_quota: float = 0.95, divisor_for_
     global frame_red_line_only
     global framecount
     frame = picam.capture_array()  # aktuelles Bild aus dem picam-Buffer abrufen
-    frame_red = frame[:, :, 0]  # Picam speichert RGB, dritter Index = 0 ist der Rot-Kanal
-    frame_red_line_only = frame_red[lineCoordinates]  # auf vorgegebenes Linien-Rechteck zuschneiden
-    #index_max_red_per_column = frame_red_line_only.argmax(0) # Index des Maximalwertes entlang Axis 0 (oben-unten)
-    #value_max_red_per_column = frame_red_line_only.max(0) # Maximalwert entlang Axis 0 (oben-unten), array mit <Breite> Werten
-    #reference_red = np.percentile(frame_red_line_only, 95)
-    reference_red = np.max(frame_red_line_only)
-#    print('reference_red=')
-#    print(reference_red)
-    threshold_red = reference_red // divisor_for_threshold  # "//" dividiert und rundet auf int ab
-    filterframe_red = frame_red_line_only > threshold_red  # ergibt für jeden Pixel True oder False
+    if algorithm == 'edge':
+        frame = frame[(y_offset-windowFrame):(y_offset+h_line+windowFrame), x_offset:(x_offset+w_line)]
+        edges = cv2.Canny(frame, 50, 150)
+        lines = cv2.HoughLinesP(edges, 1, np.pi / 180, threshold=50, minLineLength=w_line, maxLineGap=10)
+        if lines is not None:
+            return True
+        else:
+            return False
+    else:
+        frame_red = frame[:, :, 0]  # Picam speichert RGB, dritter Index = 0 ist der Rot-Kanal
+        frame_red_line_only = frame_red[lineCoordinates]  # auf vorgegebenes Linien-Rechteck zuschneiden
+        #index_max_red_per_column = frame_red_line_only.argmax(0) # Index des Maximalwertes entlang Axis 0 (oben-unten)
+        #value_max_red_per_column = frame_red_line_only.max(0) # Maximalwert entlang Axis 0 (oben-unten), array mit <Breite> Werten
+        #reference_red = np.percentile(frame_red_line_only, 95)
+        reference_red = np.max(frame_red_line_only)
+        # print('reference_red=')
+        # print(reference_red)
+        threshold_red = reference_red // divisor_for_threshold  # "//" dividiert und rundet auf int ab
+        filterframe_red = frame_red_line_only > threshold_red  # ergibt für jeden Pixel True oder False
 
-    if mode == 'any_in_column':
-        # einer der Pixel dieser Spalte ist hell genug (= hat Linie)?
-        column_has_line = np.any(filterframe_red, axis=0)
-    else:
-        column_has_line = filterframe_red
-    lineQuota = np.sum(column_has_line) / np.size(column_has_line)
-    framecount += 1
-    if framecount >=FEEDBACK_REFRESH_PERIOD: # don't show for every frame
-        cv2.imshow("frame_red_line_only", frame_red_line_only)
-        print(f"{lineQuota} liegen über {threshold_red}/255 Rotwert")
-        framecount = 0
-    if lineQuota > thresh_quota:
-        return True
-    else:
-        return False
+        if mode == 'any_in_column':
+            # einer der Pixel dieser Spalte ist hell genug (= hat Linie)?
+            column_has_line = np.any(filterframe_red, axis=0)
+        else:
+            column_has_line = filterframe_red
+        lineQuota = np.sum(column_has_line) / np.size(column_has_line)
+        framecount += 1
+        if framecount >= FEEDBACK_REFRESH_PERIOD: # don't show for every frame
+            cv2.imshow("frame_red_line_only", frame_red_line_only)
+            print(f"{lineQuota} liegen über {threshold_red}/255 Rotwert")
+            framecount = 0
+        if lineQuota > thresh_quota:
+            return True
+        else:
+            return False
 
 
 def set_framerate(rate: int):
