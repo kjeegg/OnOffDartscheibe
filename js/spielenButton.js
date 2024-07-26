@@ -27,9 +27,9 @@ async function getHighestGameUID() {
         return null;
     }
 }
-// wait for dom to load
+
+// On click of the "Spielen" button, go to the newest game (highest UID)
 document.addEventListener('DOMContentLoaded', function() {
-    // On click of the "Spielen" button, go to the game with the highest UID
     document.getElementById('playNavButton').addEventListener('click', async function(event) {
         event.preventDefault();
         const highestUID = await getHighestGameUID();

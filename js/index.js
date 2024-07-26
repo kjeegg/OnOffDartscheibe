@@ -1,3 +1,4 @@
+// Return UID of latest game, or 0 if no games exist
 async function getHighestGameUID() {
     try {
         const response = await fetch('api.php?apiFunction=getHighestGameUID', {
@@ -28,9 +29,13 @@ async function getHighestGameUID() {
     }
 }
 
+/* 
+*   NEW GAME
+*/
 const newGameBtn = document.getElementById('newGameBtn');
 newGameBtn.addEventListener('click', populatePlayerSelects);
 
+// Fill the player select element
 async function populatePlayerSelects() {
     try {
         const response = await fetch('api.php?apiFunction=getTopPlayers', {
@@ -59,8 +64,8 @@ async function populatePlayerSelects() {
         playerList.reverse();
 
         // Add placeholder option using insertAdjacentHTML
-        player1Select.insertAdjacentHTML('afterbegin', '<option value="" selected disabled>Select Player 1</option>');
-        player2Select.insertAdjacentHTML('afterbegin', '<option value="" selected disabled>Select Player 2</option>');
+        player1Select.insertAdjacentHTML('afterbegin', '<option value="" selected disabled>Spieler 1 auswählen</option>');
+        player2Select.insertAdjacentHTML('afterbegin', '<option value="" selected disabled>Spieler 2 auswählen</option>');
 
         playerList.forEach(player => {
             const option1 = document.createElement('option');
@@ -78,7 +83,7 @@ async function populatePlayerSelects() {
         // ('Fehler beim Laden der Spieler: ' + error.message);
     }
 }
-// New game
+
 document.getElementById('createGameForm').addEventListener('submit', async function(event) {
     event.preventDefault();
     const highestUID = await getHighestGameUID();
@@ -139,14 +144,17 @@ document.getElementById('createGameForm').addEventListener('submit', async funct
     }
 });
 
-// Join game
+/* 
+*   JOIN GAME
+*/
+// Populate games once site is loaded 
 document.addEventListener('DOMContentLoaded', async function() {
     await populateGameSelect();
 });
 const joinGameBtn = document.getElementById('joinGameBtn');
 joinGameBtn.addEventListener('click', populateGameSelect);
 
-
+// Fill the game select element
 async function populateGameSelect() {
     try {
         const response = await fetch('api.php?apiFunction=getAllGames', {
@@ -201,22 +209,9 @@ document.getElementById('joinGameForm').addEventListener('submit', async functio
     }
 });
 
-
-// Login
-document.getElementById('loginForm').addEventListener('submit', function(event) {
-    event.preventDefault();
-    const username = document.getElementById('username').value;
-    const password = document.getElementById('password').value;
-
-    // Simple admin login check for demonstration purposes
-    if (username === 'admin' && password === 'admin123') {
-        window.location.href = 'admin.html';
-    } else {
-        ('Falscher Benutzername oder Passwort');
-    }
-});
-
-// Add player
+/* 
+*   NEW PLAYER
+*/
 document.getElementById('addPlayerForm').addEventListener('submit', async function(event) {
     event.preventDefault();
     const playerName = document.getElementById('playerName').value;
@@ -246,6 +241,22 @@ document.getElementById('addPlayerForm').addEventListener('submit', async functi
         document.getElementById('addPlayerForm').reset();
     } catch (error) {
         ('Fehler beim Hinzufügen des Spielers: ' + error.message);
+    }
+});
+
+/* 
+*   LOGIN (currently unused)
+*/
+document.getElementById('loginForm').addEventListener('submit', function(event) {
+    event.preventDefault();
+    const username = document.getElementById('username').value;
+    const password = document.getElementById('password').value;
+
+    // Simple admin login check for demonstration purposes
+    if (username === 'admin' && password === 'admin123') {
+        window.location.href = 'admin.html';
+    } else {
+        ('Falscher Benutzername oder Passwort');
     }
 });
 

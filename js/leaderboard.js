@@ -1,5 +1,4 @@
-//! Can't guarantee that the average points are correct atm
-
+// Get all games and calculate the average points
 async function getGames() {
     try {
         const response = await fetch('api.php?apiFunction=getAllGames', {
@@ -53,6 +52,7 @@ async function getGames() {
         console.error('An error occurred:', error);
     }
 }
+
 function displayLeaderboard(playerAverages) {
     const leaderboard = document.getElementById('leaderboard');
     leaderboard.innerHTML = '';
