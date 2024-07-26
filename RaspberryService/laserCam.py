@@ -5,7 +5,7 @@ from picamera2 import Picamera2, Preview
 from libcamera import Transform, controls
 
 # height of line in px
-#h_line = 2
+# h_line = 2
 
 # Startwert, wird unten noch an den Maximalwert angepasst
 # threshold_red = 50
@@ -33,7 +33,8 @@ w_line = 650
 '''
 
 framecount = 0
-
+PICAM_FRAMERATE = 30
+FEEDBACK_REFRESH_PERIOD = 30  # number of frames
 
 lineCoordinates = np.index_exp[y_offset:(y_offset+h_line), x_offset:(x_offset+w_line)]
 #lineCoordinates = np.index_exp[620:635, 1070:1570]
@@ -48,10 +49,16 @@ picam = Picamera2()
 config = picam.create_video_configuration(main={"size": (2304, 1296)})
 picam.align_configuration(config)
 picam.configure(config)
-picam.set_controls({"AfMetering":controls.AfMeteringEnum.Windows})
-picam.set_controls({"AfWindows":[(x_offset,y_offset,w_line,h_line)]}) # A list of rectangles (tuples of 4 numbers denoting x_offset, y_offset, width and height). The rectangle units refer to the maximum scaler crop window (please refer to the ScalerCropMaximum value in the camera_properties property).
-picam.set_controls({"AeMeteringMode": controls.AeMeteringModeEnum.Spot})
-picam.start(show_preview=True)
+picam.set_controls({
+    "AfMetering":controls.AfMeteringEnum.Windows,
+    "AfWindows":[(x_offset,y_offset,w_line,h_line)], # A list of rectangles (tuples of 4 numbers denoting x_offset, y_offset, width and height). The rectangle units refer to the maximum scaler crop window (please refer to the ScalerCropMaximum value in the camera_properties property).
+    "AeMeteringMode": controls.AeMeteringModeEnum.Spot,
+    # added these (untested)
+    "FrameDurationLimits": (1000000//PICAM_FRAMERATE, 1000000//PICAM_FRAMERATE),
+    "AeConstraintMode": controls.AeConstraintModeEnum.Highlight
+})
+
+picam.start(show_preview=False)
 '''
 with picam.controls as controls:
     controls.ExposureTime = 10000
@@ -60,7 +67,7 @@ with picam.controls as controls:
 #    return picam
 
 #time.sleep(2)
-def lineCheck(mode: str = 'full_frame', thresh_quota: float = 0.9, divisor_for_threshold: float = 1.25) -> bool:
+def lineCheck(mode: str = 'full_frame', thresh_quota: float = 0.95, divisor_for_threshold: float = 1.25) -> bool:
     """Check camera feed for intact red line at given position in the picture
 
     arguments:
@@ -92,9 +99,9 @@ def lineCheck(mode: str = 'full_frame', thresh_quota: float = 0.9, divisor_for_t
     else:
         column_has_line = filterframe_red
     lineQuota = np.sum(column_has_line) / np.size(column_has_line)
-    cv2.imshow("frame_red_line_only", frame_red_line_only)
     framecount += 1
-    if framecount >=100:
+    if framecount >=FEEDBACK_REFRESH_PERIOD: # don't show for every frame
+        cv2.imshow("frame_red_line_only", frame_red_line_only)
         print(f"{lineQuota} liegen über {threshold_red}/255 Rotwert")
         framecount = 0
     if lineQuota > thresh_quota:
@@ -103,6 +110,8 @@ def lineCheck(mode: str = 'full_frame', thresh_quota: float = 0.9, divisor_for_t
         return False
 
 
+def set_framerate(rate: int):
+    PICAM_FRAMERATE = rate
 def oldSandbox():
     """Remnants of messing around ("experimenting") with the system. Just Ignore.
     I might still want to use parts though, so keep for now.
