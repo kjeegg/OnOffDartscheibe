@@ -28,9 +28,8 @@ async function getHighestGameUID() {
     }
 }
 
-document.addEventListener('DOMContentLoaded', async function() {
-    await populatePlayerSelects();
-});
+const joinGameButton = document.getElementById('joinGameBtn');
+skipButton.addEventListener('click', populatePlayerSelects);
 
 async function populatePlayerSelects() {
     try {
@@ -133,6 +132,7 @@ document.getElementById('createGameForm').addEventListener('submit', async funct
 document.addEventListener('DOMContentLoaded', async function() {
     await populateGameSelect();
 });
+
 
 async function populateGameSelect() {
     try {
