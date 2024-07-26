@@ -28,8 +28,8 @@ async function getHighestGameUID() {
     }
 }
 
-const joinGameButton = document.getElementById('joinGameBtn');
-skipButton.addEventListener('click', populatePlayerSelects);
+const newGameBtn = document.getElementById('newGameBtn');
+newGameBtn.addEventListener('click', populatePlayerSelects);
 
 async function populatePlayerSelects() {
     try {
@@ -132,6 +132,8 @@ document.getElementById('createGameForm').addEventListener('submit', async funct
 document.addEventListener('DOMContentLoaded', async function() {
     await populateGameSelect();
 });
+const joinGameBtn = document.getElementById('joinGameBtn');
+joinGameBtn.addEventListener('click', populateGameSelect);
 
 
 async function populateGameSelect() {
