@@ -1,3 +1,5 @@
+#!/usr/bin/python3
+
 from turtle import color
 import serial
 import requests
@@ -48,6 +50,7 @@ CAM_FRAMERATE:int = 30 # Kamerabilder pro Sekunde
 LOCAL_GAME_UID:int = -1#Muss über Display ein gegeben werden
 LOCAL_PLAYER_UID:int = -1#Wird auch übers Display eingestellt
 
+cookies = {"api_access_key": "ZLKcksbX5IlxrtPxFDzoexbUbaMaTc6hiGXPDL96RCZmwx1KiHiiPvr25dizfNkX"} #Der Schlüssel zur Authentifizierung bei der API
 #---------------------------------
 
 PREVIOUS_STATE:str = 'INIT' #Der Vorherige Zustand des Automaten (bei start INIT) (für zustände+übergaänge siehe Zustandsdiagram in Dokumentation)
@@ -131,14 +134,6 @@ logger.addHandler(logFileHandler)
 requests.packages.urllib3.disable_warnings(InsecureRequestWarning) #Schaltet TLS warnungen aus
 #-----------------------------
 
-'''
-Liest den Camera Feed der Onboard Camera ein
-'''
-def readCamera():
-	#Todo: Implement
-	return
-
-
 
 
 '''
@@ -158,13 +153,6 @@ def evaluateCameraFeed():
 		if getState() != 'UEBERTRITT' and overstep_count >= OVERSTEP_DURATION_THRESHOLD:
 			setState('UEBERTRITT')
 
-
-'''
-Schickt den Camera Feed an den API Server
-'''
-#Todo: Implement
-def sendCameraFeed():
-	return
 
 
 
@@ -354,10 +342,11 @@ Versuche bei der API den Spieler zu wechseln
 @return bool Gibt zurück, ob der Spielerwechsel erfolgreich war
 '''
 def requestPlayerChange() -> bool:
+	global cookies
 	uid = getUID()
 	if uid != None:
 		try:
-			req = requests.post(f"{API_SERVER_DOMAIN}/game/{str(uid)}/nextPlayer", verify=False)
+			req = requests.post(f"{API_SERVER_DOMAIN}/game/{str(uid)}/nextPlayer", cookies=cookies, verify=False)
 			if req.status_code == 200:
 				return True
 			else: #Spiel exestiert nicht
@@ -378,8 +367,9 @@ Fetched ein Spiel mit gegebener UID
 @return None bei Problemen
 '''
 def fetchUIDGame(uid : int) -> Spiel:
+	global cookies
 	try:
-		gameRequest = requests.get(f"{API_SERVER_DOMAIN}/game/{str(uid)}/display", verify=False)#Lese spiel mit uid aus
+		gameRequest = requests.get(f"{API_SERVER_DOMAIN}/game/{str(uid)}/display",cookies=cookies, verify=False)#Lese spiel mit uid aus
 		if gameRequest.status_code == 200:
 			gameJSON  = (json.loads(gameRequest.text))
 			return createSpiel(gameJSON)
@@ -402,8 +392,9 @@ Fetched einmal alle Spiele von der API
 @throws requests.exceptions.ConnectionError Falls keine Verbindung aufgebaut werden kann
 '''
 def fetchAPIGames() -> Spiel:
+	global cookies
 	try:
-		gamesRequest = requests.get(f"{API_SERVER_DOMAIN}/game", verify=False)#Lese lisste aller Spiele aus
+		gamesRequest = requests.get(f"{API_SERVER_DOMAIN}/game",cookies=cookies, verify=False)#Lese lisste aller Spiele aus
 		games = (gamesRequest.text).strip() #Aufräumen des Response
 		if games == "null":
 			logger.warning('Es konnten keine Spiele gefeched werden, da bisher keine erstellt wurden')
@@ -430,6 +421,7 @@ Hilfsmethode. Sendet einen wurf mit gegebenen Werten an die API. Und aktualisier
 @return None, falls eine Verbindung nicht möglich war
 '''
 def pushThrowToAPI(uid:int, modifier: int, value: int) -> [int, json]:
+	global cookies
 	try:
 		reqURL = f"{API_SERVER_DOMAIN}/game/{str(uid)}/throw/{str(value)}/{str(modifier)}"
 		req = requests.post(reqURL, verify=False)
@@ -628,9 +620,10 @@ Prüft ob eine Verbindung zur API aufgebaut werden kann
 @return True, wenn ja, False wenn nein
 '''
 def checkApiConnection() -> bool:
+	global cookies
 	logger.info("Prüfe die Verbindung zur API...")
 	try:
-		req = requests.get(API_SERVER_DOMAIN, verify=False)
+		req = requests.get(API_SERVER_DOMAIN,cookies=cookies, verify=False)
 		if req.status_code != 200:
 			logger.critical(f"Es konnte zwar eine Verbindung zum Server, nicht aber zur API aufgebaut werden. Statuscode: {req.status_code}")
 			return False

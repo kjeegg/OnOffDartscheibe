@@ -111,7 +111,9 @@ def lineCheck(mode: str = 'full_frame', thresh_quota: float = 0.95, divisor_for_
 
 
 def set_framerate(rate: int):
+    global PICAM_FRAMERATE
     PICAM_FRAMERATE = rate
+    picam.set_controls({"FrameDurationLimits": (1000000 // PICAM_FRAMERATE, 1000000 // PICAM_FRAMERATE)})
 def oldSandbox():
     """Remnants of messing around ("experimenting") with the system. Just Ignore.
     I might still want to use parts though, so keep for now.

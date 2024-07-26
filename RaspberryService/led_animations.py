@@ -42,11 +42,11 @@ STOP_LED = False
 def reset_LED():
     #LEDRESET_EVENT.set()
     STOP_LED = True
-    
+
 def restart_reset_event_listener():
     #LEDRESET_EVENT.clear()
     STOP_LED = False
-    
+
 
 
 # Define functions which animate LEDs in various ways.
@@ -91,7 +91,7 @@ def notReady(strip):
             strip[i]=((100+c,0,0))
         strip.show()
         time.sleep(50/1000.0)
-    
+
 
 def readyFirstTime(strip,flashIterations):
     """display green aura signalising to throw"""
@@ -100,7 +100,7 @@ def readyFirstTime(strip,flashIterations):
             if STOP_LED == True:
                 return
             strip[i] = (255,255,255)
-        strip.show()    
+        strip.show()
         time.sleep(200.0/1000.0)
         for i in range(0,NUM_PIXELS):
             if STOP_LED == True:
@@ -108,10 +108,10 @@ def readyFirstTime(strip,flashIterations):
             strip[i] = (0,255,0)
         strip.show()
         time.sleep(200.0/1000.0)
-        
-    fade(Color(0,255,0),Color(40,40,40),1)    
-        
-    
+
+    fade(Color(0,255,0),Color(40,40,40),1)
+
+
 def ready(strip):
     for i in range(0,NUM_PIXELS):
         if STOP_LED == True:
@@ -135,15 +135,45 @@ def clamping(strip):
     fillStrip(strip,(0,0,0))
     time.sleep(wait)
     fillStrip(strip,(255,0,0))
-    
 
-def bullseyeHit(strip,iterations):
+
+def bullseyeHit(strip,iterations=2):
+    color = (255,255,255)
+    fillStrip(strip,(0,0,0))
     for q in range(iterations):
-        for i in range(0,NUM_PIXELS,4):
-            strip[i] = (255,255,255)
+        for i in range(0,NUM_PIXELS):
+            for j in range(0,12):
+                if STOP_LED == True:
+                    return
+                #strip[i-j] = (((8-j)/8)*color[0],((8-j)/8)*color[1],((8-j)/8)*color[2])
+                strip[(i-j+START_PIXEL)%NUM_PIXELS] = (((12-j)/12)*color[0],((12-j)/12)*color[1],((12-j)/12)*color[2])
+                strip[(i + j + START_PIXEL) % NUM_PIXELS] = (((12 - j) / 12) * color[0], ((12 - j) / 12) * color[1], ((12 - j) / 12) * color[2])
+            strip.show()
+            time.sleep(0.05)
     return
 
 
+
+def victory(strip,duration=2):
+    iterations = int(duration/0.1)
+    for q in range(iterations):
+        for i in range(0,NUM_PIXELS):
+            num = random.random()
+            if num < 0.5:
+                strip[i] = (0,0,0)
+            else:
+                strip[i] = (255,255,255)
+        strip.show()
+        time.sleep(0.1)
+
+    fillStrip(strip,(150,250,20))
+    return
+
+def loss(strip):
+    fade(Color(255,0,0),Color(150,0,0),0.3)
+    fade(Color(150,0,0),Color(80,25,25),1)
+
+    return
 
 def wheel(pos):
     """Generate rainbow colors across 0-255 positions."""
@@ -189,15 +219,15 @@ def theaterChaseRainbow(strip, wait_ms=50):
             for i in range(0, NUM_PIXELS, 4):
                 strip[(i+q+START_PIXEL)%NUM_PIXELS] = 0
                 #strip.setPixelColor(i + q, 0)
-         
-         
-         
+
+
+
 #helping functions
 def fillStrip(strip, color):
     for i in range(NUM_PIXELS):
         strip[i] = color
     strip.show()
-    
+
 def lightOnePixel(strip,index,color=(255,255,255),duration=1):
     strip[index] = color
     strip.show()
@@ -209,43 +239,43 @@ def clearLED(strip):
     for i in range(0,NUM_PIXELS):
         strip[i] = (0,0,0)
     strip.show()
-    
+
 def fade(sourceColour,targetColour,duration):
     """Method that fade one color into another"""
     step_ms = 50.0/1000.0
     stepCount = int(duration/step_ms)
-    
+
     rs = sourceColour.r
     gs = sourceColour.g
     bs = sourceColour.b
     #ws = sourceColour.w
-    
+
     rt = targetColour.r
     gt = targetColour.g
     bt = targetColour.b
     #wt = targetColour.w
-    
+
     rDelta = rt-rs
     gDelta = gt-gs
     bDelta = bt-bs
     #wDelta = wt-ws
-    
+
     rStep = rDelta/stepCount
     gStep = gDelta/stepCount
     bStep = bDelta/stepCount
     #wStep = wDelta/stepCount
-    
+
     for i in range(0,NUM_PIXELS):
         strip[i] = sourceColour
         #strip.setPixelColor(i,sourceColour)
     strip.show()
-    
+
     for t in range(0, stepCount):
         rs += rStep
         gs += gStep
         bs += bStep
         #ws += wStep
-        
+
         for i in range(0,NUM_PIXELS):
             if STOP_LED == True:
                 return
@@ -257,16 +287,16 @@ def fade(sourceColour,targetColour,duration):
 
 
 def trimColor(oldColor):
-    """Set color value to 255 if it for some reason becames higher"""
+    """Set color value to 255 if it for some reason becomes higher"""
     if oldColor.r>255:
         newColor.r = 255
     if oldColor.g>255:
         newColor.g = 255
     if oldColor.b>255:
         newColor.b = 255
-    
+
     return newColor
-    
+
 
 
 # Main program logic follows:
@@ -286,7 +316,7 @@ if __name__ == '__main__':
     if not args.clear:
         print('Use "-c" argument to clear LEDs on exit')
 
- 
+
     try:
         while True:
             #print("testing red light")
@@ -295,12 +325,12 @@ if __name__ == '__main__':
             #allowedToThrow(strip,5)
             #playerHitTheTarget(strip)
             #playerMissedTheTarget(strip)
-            
+
             #colorWipe(strip, (255,255,255),2)
             #theaterChaseRainbow(strip)
             #rainbowCycle(strip)
             #theaterChase(strip,(255,255,255))
-            
+
             #time.sleep(2)
             #fade(Color(255,0,0),Color(0,255,0),2)
             #fade(Color(0,255,0),Color(255,0,0),2)
@@ -309,7 +339,7 @@ if __name__ == '__main__':
             #lightOnePixel(strip, int(random.Random()*NUM_PIXELS))
             #time.sleep(1)
             bullseyeHit(strip,2)
-            
+
 
     except KeyboardInterrupt:
         if args.clear:
