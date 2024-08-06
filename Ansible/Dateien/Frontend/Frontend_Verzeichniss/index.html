@@ -10,17 +10,17 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@100..900&display=swap" rel="stylesheet">
-
+    <script src="/js/spielenButton.js"></script>
     <title>Dartscheibe - Startseite</title>
 </head>
 <body>
     <nav class="navbar-own">
         <a href="index.html" class="">Dartscheibe</a>
         <div class="nav-items">
-            <a href="spiel.html">Spielen</a>
+            <a id="playNavButton" class="js-a">Spielen</a>
             <a href="leaderboard.html">Leaderboard</a>
             <div>
-                <button class="nav-button "data-bs-toggle="modal" data-bs-target="#loginModal">Login</button>
+                <button class="nav-button "data-bs-toggle="modal" data-bs-target="#wipModal">Login</button>
             </div>
         </div>
     </nav>
@@ -36,51 +36,82 @@
     </div>
 
 <!-- Modals -->
-<!-- New Game Modal -->
-<div class="modal fade" id="newGameModal" tabindex="-1" aria-labelledby="newGameModalLabel" aria-hidden="true">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="text-dark modal-title" id="newGameModalLabel">Neues Spiel erstellen</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                <form id="createGameForm">
-                    <div class="mb-3">
-                        <label for="player1Id" class="text-dark form-label">Spieler 1 ID</label>
-                        <input type="text" class="form-control" id="player1Id" required>
-                    </div>
-                    <div class="mb-3">
-                        <label for="player2Id" class="text-dark form-label">Spieler 2 ID</label>
-                        <input type="text" class="form-control" id="player2Id" required>
-                    </div>
-                    <button type="submit" class="btn btn-primary">Spiel erstellen</button>
-                </form>
+    <!-- New Game Modal -->
+    <div class="modal fade" id="newGameModal" tabindex="-1" aria-labelledby="newGameModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="text-dark modal-title" id="newGameModalLabel">Neues Spiel erstellen</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="createGameForm">
+                        <label class="text-dark form-label">Spielmodus</label>
+                        <div class="mb-3 ms-2 d-flex">
+                            <div class="w-50 d-inline">
+                                <div class="form-check ml-3">
+                                    <input type="radio" name="variantRadio" class="form-check-input" id="use301Variant"></input>
+                                    <label for="use301Variant" class="form-check-label">301</label>
+                                </div>
+                                <div class="form-check ml-3">
+                                    <input type="radio" name="variantRadio" class="form-check-input" id="use501Variant" checked></input>
+                                    <label for="use501Variant" class="form-check-label">501</label>
+                                </div>
+                            </div>
+                            <div class="w-50 d-inline">
+                                <div class="form-check ml-3">
+                                    <input type="radio" name="outRadio" class="form-check-input" id="useSingleOut"></input>
+                                    <label for="useSingleOut" class="form-check-label">Single Out</label>
+                                </div>
+                                <div class="form-check ml-3">
+                                    <input type="radio" name="outRadio" class="form-check-input" id="useDoubleOut" checked></input>
+                                    <label for="useDoubleOut" class="form-check-label">Double Out</label>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label for="player1Id" class="text-dark form-label">Spieler 1</label>
+                            <select class="form-control" id="player1Id" required>
+                                <!-- Options will be populated by JavaScript -->
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label for="player2Id" class="text-dark form-label">Spieler 2</label>
+                            <select class="form-control" id="player2Id" required>
+                                <!-- Options will be populated by JavaScript -->
+                            </select>
+                        </div>
+                        <button type="submit" class="btn btn-primary">Spiel erstellen</button>
+                    </form>
+                </div>
             </div>
         </div>
     </div>
-</div>
 
-<!-- Join Game Modal -->
-<div class="modal fade" id="joinGameModal" tabindex="-1" aria-labelledby="joinGameModalLabel" aria-hidden="true">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="text-dark modal-title" id="joinGameModalLabel">Spiel beitreten</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                <form id="joinGameForm">
-                    <div class="mb-3">
-                        <label for="joinGameId" class="text-dark form-label">Spiel-ID</label>
-                        <input type="text" class="form-control" id="joinGameId" required>
-                    </div>
-                    <button type="submit" class="btn btn-primary">Beitreten</button>
-                </form>
+
+    <!-- Join Game Modal -->
+    <div class="modal fade" id="joinGameModal" tabindex="-1" aria-labelledby="joinGameModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="text-dark modal-title" id="joinGameModalLabel">Spiel beitreten</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="joinGameForm">
+                        <div class="mb-3">
+                            <label for="joinGameSelect" class="text-dark form-label">Spiel auswählen</label>
+                            <select class="form-control" id="joinGameSelect" required>
+                                <!-- Options will be populated by JavaScript -->
+                            </select>
+                        </div>
+                        <button type="submit" class="btn btn-primary">Beitreten</button>
+                    </form>
+                </div>
             </div>
         </div>
     </div>
-</div>
+
 
 <!-- Add Player Modal -->
 <div class="modal fade" id="addPlayerModal" tabindex="-1" aria-labelledby="addPlayerModalLabel" aria-hidden="true">
@@ -128,10 +159,25 @@
     </div>
 </div>
 
+<!-- "Not Available" Modal -->
+<div class="modal fade" id="wipModal" tabindex="-1" aria-labelledby="wipModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="text-dark modal-title" id="wipModalLabel">Login</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>Diese Funktion ist noch nicht verfügbar.</p>
+            </div>
+        </div>
+    </div>
+</div>
+
 <footer>
     <div class="footer-div">
         <a href="/contact.html">Kontakt</a>
-        <a href="/impressum.html">Impressum</a>
+        <a href="/Impressum.html">Impressum</a>
         <a href="/datenschutz.html">Datenschutz</a>
     </div>
     <div class="theme-switch-wrapper">

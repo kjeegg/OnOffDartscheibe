@@ -3,7 +3,7 @@ const container = document.querySelector('.fireworks-container');
 const fireworks = new Fireworks.default(container);
 
 // Script Version
-console.log("Version: " + 0.1);
+console.log("Version: 0.2.3");
 
 async function loadGame() {
     const gameId = getGameId();
@@ -35,12 +35,7 @@ async function loadGame() {
         if (game.GameState === "THROW" && game.Player[game.ActivePlayer].LastThrows.length === 3) {
             clearLast3Throws(game.ActivePlayer);
         }
-        // Clear last throws if game just started
-        if (game.ThrowRound === 1) {
-            clearLast3Throws(0);
-            clearLast3Throws(1);
-        }
-
+        // Check for bust
         if (game.GameState === "BUST") {
             bust(game, false);
         } else if (game.GameState === "BUSTNOCHECKOUT") {
@@ -55,7 +50,9 @@ function getGameId() {
     const urlParams = new URLSearchParams(window.location.search);
     return urlParams.get('gameId');
 }
-// Rn just a duplicate of loadGame
+
+//* For future use: Don't call every function inside the fetch request
+// Better yet: Don't use this frontend, use react or sumn
 async function getGameById(gameId) {
     try {
         const response = await fetch(`api.php?apiFunction=getGameDisplay&gameId=${gameId}`, {
@@ -78,11 +75,8 @@ async function getGameById(gameId) {
 
 
 function setLast3Throws(game) {
-    // i -> player, j -> throw
+    // i is player, j is throw
     for (let i = 0; i <= 1; i++) {
-        // unnecessary but leaving this here in case we need it again
-        // if (game.Activeplayer = i && localStorage.getItem('playerSwitched') !== 'true')
-
         for (let j = 0 ; j <= game.Player[i].LastThrows.length - 1; j++) {
             const throwElement = document.getElementById(`throw-${i}-${j + 1}`);
             if (game.Player[i].LastThrows[j].Number === 0) {
@@ -102,6 +96,7 @@ function clearLast3Throws(player) {
     }
 }
 
+// Inserts name and score of players
 function updateGameDisplay(game) {
 
     if (!game || !game.Player || game.Player.length === 0) {
@@ -126,36 +121,9 @@ function updateGameDisplay(game) {
         player2Name.textContent = player2.Name;
         player2Score.textContent = player2.Score?.Score || 0;
     }
-    
-
-    const historyTableBody = document.getElementById('historyTableBody');
-    if (historyTableBody) {
-        historyTableBody.innerHTML = '';
-        game.Player.forEach(player => {
-            if (player.ThrowRounds) {
-                player.ThrowRounds.forEach(round => {
-                    if (round.Throws && round.Throws.length > 0) {
-                        const row = document.createElement('tr');
-                        const playerNameCell = document.createElement('td');
-                        const roundCell = document.createElement('td');
-                        const pointsCell = document.createElement('td');
-
-                        playerNameCell.textContent = player.Name;
-                        roundCell.textContent = round.Round;
-                        pointsCell.textContent = round.Throws.map(t => `${t.Number * t.Modifier}`).join(', ');
-
-                        row.appendChild(playerNameCell);
-                        row.appendChild(roundCell);
-                        row.appendChild(pointsCell);
-                        historyTableBody.appendChild(row);
-                    }
-                });
-            }
-        });
-    }
-
     previousGameData = game;
 }
+
 async function deleteLastThrows() {
     const gameId = getGameId();
     try {
@@ -177,16 +145,17 @@ async function deleteLastThrows() {
 
 }
 
-// Handle invalid throws
+// Handle invalid throws (never used lmao)
 function handleInvalidThrow(throwData) {
     const throwValue = throwData.Number * throwData.Modifier;
     if (throwValue === 0) {
-        //alert('Invalid throw: 0 points. This throw will not be recorded.');
+        console.log('Invalid throw. ill not be recorded.');
         return false;
     }
     return true;
 }
 
+// Gets game variant and out, displays it as title
 document.addEventListener('DOMContentLoaded', function() {
     loadTitle();
 });
@@ -242,7 +211,6 @@ async function nextPlayer() {
     }
     console.log('Last ActivePlayer: ' + ActivePlayer);
     loadGame();
-    // clearLast3Throws(ActivePlayer);
 }
 
 var bustModal = new bootstrap.Modal(document.getElementById("bustModal"));
@@ -261,7 +229,10 @@ function bust(game, nocheckout = false) {
     bustModal.show();
 }
 
-/* game buttons */
+/* 
+    GAME BUTTONS
+*/
+
 async function skipTurn() {
     nextPlayer();
     console.log('Turn skipped');
@@ -338,13 +309,14 @@ function displayWinner(game) {
     } else if(game.Player[1].Score?.Score === 0) {
         console.log('Winner: ' + game.Player[1].Name)
         document.getElementById('winner').textContent = game.Player[1].Name;
-        document.getElementById('player1-box').style.boxShadow = '0 0 100px 0px #00b1ac';
+        document.getElementById('player2-box').style.boxShadow = '0 0 100px 0px #00b1ac';
         winModal.show();
         document.querySelector('.fireworks-container').style.display = 'block';
         fireworks.start();
     }
 }
 
+// Rotate the arrow in the middle and box-shadow the active player
 function updatePlayerTurn(game) {
     if(game.ActivePlayer === 0) {
         document.getElementById('player1-box').classList.add('active');
@@ -359,7 +331,7 @@ function updatePlayerTurn(game) {
     }
 }
 
-
+// fetch all data from api every 2000 ms
 window.onload = function() {
     loadGame();
     setInterval(loadGame, 2000); // Update interval

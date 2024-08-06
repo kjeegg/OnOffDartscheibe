@@ -1,5 +1,3 @@
-#!/usr/bin/python3
-
 from turtle import color
 import serial
 import requests
@@ -9,8 +7,6 @@ import logging
 import threading
 from threading import Lock
 import time
-from lcdSelect import lcdUserListSelect
-from laserCam import lineCheck
 from rpi_ws281x import PixelStrip, Color
 from led_animations import *
 import argparse
@@ -40,17 +36,11 @@ CHECK_GAME_UPDATE_INTERVAL_MIN:int = 2
 
 SHOW_GAME_INTERVALL:int = 3 #Das intervall in dem der Aktuelle Spielzustand auf der Konsole angezeigt werden soll
 
-'''
-Linienerkennung
-'''
-OVERSTEP_DURATION_THRESHOLD:int = 3 # Ansprechverzögerung der Übertritterkennung in Samples (Frames)
-CAM_FRAMERATE:int = 30 # Kamerabilder pro Sekunde
 
 
 LOCAL_GAME_UID:int = -1#Muss über Display ein gegeben werden
 LOCAL_PLAYER_UID:int = -1#Wird auch übers Display eingestellt
 
-cookies = {"api_access_key": "ZLKcksbX5IlxrtPxFDzoexbUbaMaTc6hiGXPDL96RCZmwx1KiHiiPvr25dizfNkX"} #Der Schlüssel zur Authentifizierung bei der API
 #---------------------------------
 
 PREVIOUS_STATE:str = 'INIT' #Der Vorherige Zustand des Automaten (bei start INIT) (für zustände+übergaänge siehe Zustandsdiagram in Dokumentation)
@@ -111,11 +101,11 @@ serial_conn = serial.Serial() #Das Objekt für die Serielle Verbindung (wird bei
 
 # Create a custom logger
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.DEBUG)#Logger loggt erstmal alles
+logger.setLevel(logging.INFO)#Logger loggt erstmal alles
 
 # Create handlers
 consoleLogHandler = logging.StreamHandler()
-consoleLogHandler.setLevel(logging.INFO)#Auf der console wird maximal INFO lvl ausgegeben
+consoleLogHandler.setLevel(logging.DEBUG)#Auf der console wird maximal INFO lvl ausgegeben
 
 logFileHandler = logging.FileHandler(LOG_FILE_LOCATION)
 logFileHandler.setLevel(logging.DEBUG)#In der Log Datei wird alles gespeicehrt bis einschließlich DEBUG
@@ -134,6 +124,14 @@ logger.addHandler(logFileHandler)
 requests.packages.urllib3.disable_warnings(InsecureRequestWarning) #Schaltet TLS warnungen aus
 #-----------------------------
 
+'''
+Liest den Camera Feed der Onboard Camera ein
+'''
+def readCamera():
+	#Todo: Implement
+	return
+
+
 
 
 '''
@@ -141,18 +139,16 @@ Wertet den Camera Feed aus, aka Führt die Bildereknneugn für die Linie aus, un
 nuzt die API funktionen 
 '''
 def evaluateCameraFeed():
-	overstep_count: int = 0
-	while True:
-		if lineCheck(mode='any_in_column',thresh_quota=0.95, divisor_for_threshold=1.4) is False: # False, wenn Linie Übertreten
-			if overstep_count < OVERSTEP_DURATION_THRESHOLD:
-				overstep_count += 1
-		else:
-			overstep_count = 0
-			if getState() == 'UEBERTRITT':
-				setState(getPreviousState())
-		if getState() != 'UEBERTRITT' and overstep_count >= OVERSTEP_DURATION_THRESHOLD:
-			setState('UEBERTRITT')
+	#Todo: Implement
+	return
 
+
+'''
+Schickt den Camera Feed an den API Server
+'''
+#Todo: Implement
+def sendCameraFeed():
+	return
 
 
 
@@ -174,13 +170,13 @@ STATE_WAS_SET = False
 def LEDController():
 	global STATE_WAS_SET
 	while True:
-		if STATE_WAS_SET == True:
+		if STATE_WAS_SET == True:	
 			logger.info("Entered state changer")
 			reset_LED()
 			time.sleep(0.1)
 			restart_reset_event_listener()
-			#reset_LED()
-			state=getState()
+			#reset_LED()		
+			state=getState()        
 			if state == 'UEBERTRITT' or state == 'OTHER_PLAYER': #Spieler darf NICHT WERFEN
 				showNotReady()
 			elif state == 'INIT' or state == 'THROW_1': #Spieler darf Werfen
@@ -189,13 +185,14 @@ def LEDController():
 				showReady()
 			elif state == 'CLAMPING':
 				showClamping()
-
+			
 			STATE_WAS_SET = False
 
 '''
 Schaltet den angeschlossenden LED Strip
 '''
 def enableLEDs():
+	#Todo: Implement
 	return
 
 
@@ -218,7 +215,7 @@ Zeigt dem Spieler an das er/sie Gewonnen hat
 '''
 def showWin():
 	reset_LED()
-
+	
 	'''
 	TODO:
 		implement. soll später via leds anzeigen, aktuell Placeholder mit einfacher Text ausgabe
@@ -234,7 +231,7 @@ Zeigt dem Spieler an das er/sie nicht werfen darf
 def showNotReady():
 	reset_LED()
 	notReady(strip)
-
+	
 	print("PLACEHOLDER: Sie dürfen NICHT werfen")
 	return
 
@@ -246,7 +243,7 @@ def showReadyFirstTime():
 	reset_LED()
 	readyFirstTime(strip,3)
 	return
-
+	
 
 '''
 Zeigt dem Spieler an das er/sie werfen darf
@@ -263,12 +260,12 @@ def showPlayerHit():
 	reset_LED()
 	playerHit(strip)
 	return
-
+	
 def showPlayerMissed():
 	reset_LED()
 	playerMissed(strip)
 	return
-
+	
 def showClamping():
 	reset_LED()
 	clamping(strip)
@@ -342,11 +339,10 @@ Versuche bei der API den Spieler zu wechseln
 @return bool Gibt zurück, ob der Spielerwechsel erfolgreich war
 '''
 def requestPlayerChange() -> bool:
-	global cookies
 	uid = getUID()
 	if uid != None:
 		try:
-			req = requests.post(f"{API_SERVER_DOMAIN}/game/{str(uid)}/nextPlayer", cookies=cookies, verify=False)
+			req = requests.post(f"{API_SERVER_DOMAIN}/game/{str(uid)}/nextPlayer", verify=False)
 			if req.status_code == 200:
 				return True
 			else: #Spiel exestiert nicht
@@ -367,9 +363,8 @@ Fetched ein Spiel mit gegebener UID
 @return None bei Problemen
 '''
 def fetchUIDGame(uid : int) -> Spiel:
-	global cookies
 	try:
-		gameRequest = requests.get(f"{API_SERVER_DOMAIN}/game/{str(uid)}/display",cookies=cookies, verify=False)#Lese spiel mit uid aus
+		gameRequest = requests.get(f"{API_SERVER_DOMAIN}/game/{str(uid)}/display", verify=False)#Lese spiel mit uid aus
 		if gameRequest.status_code == 200:
 			gameJSON  = (json.loads(gameRequest.text))
 			return createSpiel(gameJSON)
@@ -392,9 +387,8 @@ Fetched einmal alle Spiele von der API
 @throws requests.exceptions.ConnectionError Falls keine Verbindung aufgebaut werden kann
 '''
 def fetchAPIGames() -> Spiel:
-	global cookies
 	try:
-		gamesRequest = requests.get(f"{API_SERVER_DOMAIN}/game",cookies=cookies, verify=False)#Lese lisste aller Spiele aus
+		gamesRequest = requests.get(f"{API_SERVER_DOMAIN}/game", verify=False)#Lese lisste aller Spiele aus
 		games = (gamesRequest.text).strip() #Aufräumen des Response
 		if games == "null":
 			logger.warning('Es konnten keine Spiele gefeched werden, da bisher keine erstellt wurden')
@@ -421,7 +415,6 @@ Hilfsmethode. Sendet einen wurf mit gegebenen Werten an die API. Und aktualisier
 @return None, falls eine Verbindung nicht möglich war
 '''
 def pushThrowToAPI(uid:int, modifier: int, value: int) -> [int, json]:
-	global cookies
 	try:
 		reqURL = f"{API_SERVER_DOMAIN}/game/{str(uid)}/throw/{str(value)}/{str(modifier)}"
 		req = requests.post(reqURL, verify=False)
@@ -548,10 +541,10 @@ def setState(state: str):
 	PREVIOUS_STATE_LOCK.release()
 	logger.debug(f"Zustandswechsel: Vorheriger Zustand: {temp}, neuer Zustand: {state}")
 	#LEDRESET_EVENT.set()
-
+	
 	#restart_reset_event_listener()
 	STATE_WAS_SET = True
-	return
+	return 
 
 
 '''
@@ -620,10 +613,9 @@ Prüft ob eine Verbindung zur API aufgebaut werden kann
 @return True, wenn ja, False wenn nein
 '''
 def checkApiConnection() -> bool:
-	global cookies
 	logger.info("Prüfe die Verbindung zur API...")
 	try:
-		req = requests.get(API_SERVER_DOMAIN,cookies=cookies, verify=False)
+		req = requests.get(API_SERVER_DOMAIN, verify=False)
 		if req.status_code != 200:
 			logger.critical(f"Es konnte zwar eine Verbindung zum Server, nicht aber zur API aufgebaut werden. Statuscode: {req.status_code}")
 			return False
@@ -639,9 +631,9 @@ Prüft ob eine Verbindung zur Onboard Kamera aufgebaut werden kann
 @return True, wenn ja, False wenn nein
 '''
 def checkCameraConnection() -> bool:
-
-	#initCamera()
-
+	'''
+		TODO. Implement
+	'''
 	return True
 
 '''
@@ -747,7 +739,7 @@ def sendThrow(modifier: int, value: int):
 			showPlayerMissed()
 		else:
 			showPlayerHit()
-
+		
 		uid:int = getUID()
 		statusCode, jsonResponse = pushThrowToAPI(uid, modifier, value)#Schickt den Wurf an die API		
 		if statusCode != None: #Keine Verbindungsprobleme, bei Problemen wird Fehler woanders ausgegeben
@@ -790,11 +782,11 @@ def sendThrow(modifier: int, value: int):
 					setState('OTHER_PLAYER') #Neuen State entsprechend setzen
 					logger.info(f'Sie hatten bereits 3 Würfe. Wechsel Spieler')
 					return
-			elif statusCode == 404: #Dürfte auch nicht eintreten, außer das Spiel wurde während des Spielablaufs gelöscht
-				logger.critical(f"Ihr Wurf: {modifier},{value}, konnte nicht übertragen werden, da das Spiel mit der UID: {uid}, nicht gefunden werden konnte. (Wurde vermutlich gelöscht/beendet)")
+			elif wurfStatusCode == 404: #Dürfte auch nicht eintreten, außer das Spiel wurde während des Spielablaufs gelöscht
+				logger.critical(f"{localPlayer.name} - Ihr Wurf: {modifier},{value}, konnte nicht übertragen werden, da das Spiel mit der UID: {uid}, nicht gefunden werden konnte. (Wurde vermutlich gelöscht/beendet)")
 				return
 			else: #Unbekannter Fehler -> Ausgeben
-				logger.critical(f"Beim Übertragen des Wurfs ist ein unbekannter Fehler aufgetreten. Response Code: {statusCode}:{json.dumps(jsonResponse)}")
+				logger.critical(f"Beim Übertragen des Wurfs ist ein unbekannter Fehler aufgetreten. Response Code: {wurfStatusCode}:{json.dumps(jsonResponse)}")
 				return
 
 	if state == 'OTHER_PLAYER':
@@ -843,9 +835,8 @@ Und behandelt die erhaltenen Daten entsprechend.
 @param arduinoMsg die auszuwertende Nachricht
 '''
 def computeArduinoMsg(arduinoMsg: str):
-	# Klemm-Erkennung
 	global lastArduinoMsgTime
-
+	
 	newArduinoMsgTime = time.time()
 	if newArduinoMsgTime - lastArduinoMsgTime < MIN_ALLOWED_DELAY:
 		logger.critical("Zu öfte Arduino nachrichten!")
@@ -853,11 +844,11 @@ def computeArduinoMsg(arduinoMsg: str):
 		#showClamping()
 		lastArduinoMsgTime = time.time()
 		return
-
+		
 	if getState() == 'CLAMPING':
 		setState(getPreviousState())
-
-
+		
+	
 	modifier = value =  -1 #Init beide Werte mit nem Placeholder Wert
 	nachrichtValidity:[bool,bool] = checkArduinoMsgValidity(arduinoMsg)
 	if(nachrichtValidity[0] == True):# Es wird nur auf valide Nachrichten reagiert
@@ -885,6 +876,7 @@ def arduinoSerialReceiver():
 			if serial_conn.in_waiting > 0: #Es kommen Daten auf der Verbindnung an
 				arduinoMsg = serial_conn.readline().decode().strip()#Einlesen, Bytecode umwandeln, + extrazeichen entfernen
 				computeArduinoMsg(arduinoMsg)
+				
 	except serial.serialutil.SerialException:
 		logger.critical("Die Verbindung zum Arduino ist abgebrochen")
 	return
@@ -954,11 +946,11 @@ def checkGameStateChanges(latestGame: Spiel):
 			#rundenWuerfe:int = len(aktPlayer.lastThrows) #Die anzahl an bisherigen Würfen des Aktiven Spielrs für die aktuelle Runde
 			#newState = None
 			#match rundenWuerfe:
-				#case 0:
+				#case 0: 
 					#newState = 'THROW_1'
-				#case 1:
+				#case 1: 
 					#newState = 'THROW_2'
-				#case 2:
+				#case 2: 
 					#newState = 'THROW_3'
 				#case 3: #Wir hatten alle Würfe, haben aber noch nicht gewechselt
 					#newState = 'OTHER_PLAYER'
@@ -990,7 +982,7 @@ def showGame():
 	while True:
 		currentState:str = getState()
 		if currentState != 'NG' and currentState != 'INIT':
-			player:Spieler = getPlayer()
+			player:Player = getPlayer()
 			uid:int = getUID()
 			logger.info(f'Spiel: {uid} | Zustand: {currentState} - Lokaler Spieler: {player.name}. Runde: {player.totalThrowCount}. Score: {getPlayerScore(player)}. Gesammtwurfzahl: {player.totalThrowCount}. Average: {player.average}')			 
 		time.sleep(SHOW_GAME_INTERVALL)
@@ -1094,25 +1086,23 @@ def userInit():
 		while games == None:
 			games = fetchAPIGames()
 			time.sleep(1)
-		spieleListe = [] #Liste aus Strings
-
-		for i in range(len(games)):
-			spieleListe.append(f"Spiel: {games[i].uid}")
-
-		uid_auswahl:int = lcdUserListSelect(spieleListe, "Bitte UID ihres Spiels waehlen:")
-		uid = games[uid_auswahl].uid
-		logger.info(f"Übers Display wurde Spiel: {uid} gewählt")
-
-
+		print("Welches Spiel: ")
+		s = ""
+		for spiel in games:
+			s = s + spiel.uid + " | "
+		print(s)
+		uid = int(input(""))
 		setUID(uid)
 		curGame:Spiel = fetchUIDGame(getUID())
 		p1:Spieler = createPlayer(curGame, 0)
 		p2:Spieler = createPlayer(curGame, 1)
+		print("Welche UID: ")
+		print(f"{p1.uid}: {p1.name}")
+		print(f"{p2.uid}: {p2.name}")
+		pUID = int(input(""))
 
-		spieler_liste = [f"Spieler: {p1.uid}: {p1.name}", f"Spieler: {p2.uid}: {p2.name}"]
-		spieler_auswahl:int = lcdUserListSelect(spieler_liste, "Bitte ihren Spieler waehlen:")
-		pUID = p1.uid if spieler_auswahl == 0 else p2.uid
-		logger.info(f"Übers Display wurde Spieler: {pUID} gewählt")
+
+		#Erste initialisierung aller variablen, aktuellen Spielzustand bestimmen anhand der Daten
 		
 		state:str = calcGameState(curGame, pUID)
 		
@@ -1124,8 +1114,8 @@ def userInit():
 		setPlayer(curPlayer)
 		setState(state)
 
-	#else:
-		#os._exit() #Beende erstmal wenn die API nicht erreicht werden kann
+	else:
+		os._exit() #Beende erstmal wenn die API nicht erreicht werden kann
 	
 	'''
 	#TODO:
@@ -1159,16 +1149,12 @@ def startSystem():
 	if checkConnectionsSetup(): #All Endpunkte sind erreichbar
 		curGameUpdateCheckker_Thread = threading.Thread(target=fetchGameUpdates)#Prüft ob das aktuelle Spiel updates hat
 		curGameUpdateCheckker_Thread.daemon = True
-		curGameUpdateCheckker_Thread.start()
+		curGameUpdateCheckker_Thread.start() 
 
 		showGame_Thread = threading.Thread(target=showGame)#Gibt Regelmässig aktuelle Werte fürs Spiel aus
 		showGame_Thread.daemon = True
 		showGame_Thread.start()
 		
-		camera_Thread = threading.Thread(target=evaluateCameraFeed)
-		camera_Thread.daemon = True
-		camera_Thread.start()
-
 		LEDControl_Thread = threading.Thread(target=LEDController)
 		LEDControl_Thread.daemon = True
 		LEDControl_Thread.start()
@@ -1196,6 +1182,9 @@ def startSystem():
 def main():
 	userInit() #Warted darauf, das der Nutzer die nötigen eingaben getätigt hat
 	startSystem()
+	#showNotReady()
+	#showReadyFirstTime()
+	#showReady()
 	return
 
 

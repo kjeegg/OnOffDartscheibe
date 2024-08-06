@@ -11,16 +11,17 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@100..900&display=swap" rel="stylesheet">
     <script src="/js/leaderboard.js"></script>
+    <script src="/js/spielenButton.js"></script>
     <title>Leaderboard</title>
 </head>
 <body>
     <nav class="navbar-own">
         <a href="index.html" class="">Dartscheibe</a>
         <div class="nav-items">
-            <a href="spiel.html">Spielen</a>
-            <a class="nav-active" href="#">Leaderboard</a>
+            <a id="playNavButton" class="js-a">Spielen</a>
+            <a href="leaderboard.html">Leaderboard</a>
             <div>
-                <button class="nav-button">Login</button>
+                <button class="nav-button "data-bs-toggle="modal" data-bs-target="#wipModal">Login</button>
             </div>
         </div>
     </nav>
@@ -29,7 +30,8 @@
             <thead>
                 <th>Platz</th>
                 <th>Name</th>
-                <th>Average score</th>
+                <th>Spieler-ID</th>
+                <th>Durchschnittlicher Wurf</th>
             </thead>
             <tbody id="leaderboard">
                 <tr>
@@ -66,5 +68,32 @@
             </div>
         </div>
     </div>
-
+    <!-- "Not Available" Modal -->
+    <div class="modal fade" id="wipModal" tabindex="-1" aria-labelledby="wipModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="text-dark modal-title" id="wipModalLabel">Login</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p>Diese Funktion ist noch nicht verfügbar.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    <footer>
+        <div class="footer-div">
+            <a href="/contact.html">Kontakt</a>
+            <a href="/Impressum.html">Impressum</a>
+            <a href="/datenschutz.html">Datenschutz</a>
+        </div>
+        <div class="theme-switch-wrapper">
+            <p>Dark Mode</p>
+            <label class="theme-switch" for="checkbox">
+                <input type="checkbox" id="checkbox" />
+                <div class="slider round"></div>
+          </label>
+        </div>
+    </footer>
 </body>

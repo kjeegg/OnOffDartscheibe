@@ -1,7 +1,16 @@
-/* TODO: Media queries */
 body {
     background-color: var(--bg-color);
     color: var(--font-color);
+}
+@media (max-height: 45rem) {
+    footer {
+        position:relative !important;
+    }
+}
+@media only screen and (min-width: 2560px) and (max-height: 60rem) {
+    footer {
+        position:relative !important;
+    }
 }
 .container {
     text-align: center;
@@ -120,6 +129,7 @@ body {
     justify-content: center;
     gap: 1.25rem;
     margin-top: 3.125rem;
+    margin-bottom: 10rem;
 }
 .history-table {
     margin-top: 3.125rem;

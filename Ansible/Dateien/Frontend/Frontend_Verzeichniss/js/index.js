@@ -1,3 +1,4 @@
+// Return UID of latest game, or 0 if no games exist
 async function getHighestGameUID() {
     try {
         const response = await fetch('api.php?apiFunction=getHighestGameUID', {
@@ -23,20 +24,85 @@ async function getHighestGameUID() {
         return highestUID;
     } catch (error) {
         console.error('Fehler beim Laden der Spiele:', error);
-        alert('Fehler beim Laden der Spiele: ' + error.message);
+        // ('Fehler beim Laden der Spiele: ' + error.message);
         return null;
     }
 }
 
-// New game
+/* 
+*   NEW GAME
+*/
+const newGameBtn = document.getElementById('newGameBtn');
+newGameBtn.addEventListener('click', populatePlayerSelects);
+
+// Fill the player select element
+async function populatePlayerSelects() {
+    try {
+        const response = await fetch('api.php?apiFunction=getTopPlayers', {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        });
+
+        if (!response.ok) {
+            throw new Error('Network response was not ok');
+        }
+
+        const players = await response.json();
+        const player1Select = document.getElementById('player1Id');
+        const player2Select = document.getElementById('player2Id');
+
+        player1Select.innerHTML = ''; // Clear any existing options
+        player2Select.innerHTML = ''; // Clear any existing options
+
+        let playerList = [];
+        players.forEach(player => {
+            playerList.push(player);
+        });
+
+        playerList.reverse();
+
+        // Add placeholder option using insertAdjacentHTML
+        player1Select.insertAdjacentHTML('afterbegin', '<option value="" selected disabled>Spieler 1 auswählen</option>');
+        player2Select.insertAdjacentHTML('afterbegin', '<option value="" selected disabled>Spieler 2 auswählen</option>');
+
+        playerList.forEach(player => {
+            const option1 = document.createElement('option');
+            option1.value = player.UID;
+            option1.text = `${player.Name} - UID: ${player.UID}`;
+            player1Select.appendChild(option1);
+
+            const option2 = document.createElement('option');
+            option2.value = player.UID;
+            option2.text = `${player.Name} - UID: ${player.UID}`;
+            player2Select.appendChild(option2);
+        });
+    } catch (error) {
+        console.error('Fehler beim Laden der Spieler:', error);
+        // ('Fehler beim Laden der Spieler: ' + error.message);
+    }
+}
+
 document.getElementById('createGameForm').addEventListener('submit', async function(event) {
     event.preventDefault();
     const highestUID = await getHighestGameUID();
 
     // should not happen, highestUID is 0 if no games exist
     if (highestUID === null) {
-        alert('Fehler beim Erstellen des neuen Spiels');
+        ('Fehler beim Erstellen des neuen Spiels');
         return;
+    }
+
+    // default values for variant and out
+    const gameVariant = "501";
+    const out = "double";
+
+    if (document.getElementById('useSingleOut').checked) {
+        out = "single"
+    }
+    if (document.getElementById('use301Variant').checked) {
+        gameVariant = "301"
     }
 
     const newGameId = String(parseInt(highestUID) + 1);
@@ -48,9 +114,9 @@ document.getElementById('createGameForm').addEventListener('submit', async funct
         "uid": newGameId,
         "player": [player1Id, player2Id],
         "game": "x01",
-        "variant": "501",
+        "variant": gameVariant,
         "in": "straight",
-        "out": "double",
+        "out": out,
         "sound": true,
         "podium": false,
         "autoswitch": false,
@@ -74,14 +140,55 @@ document.getElementById('createGameForm').addEventListener('submit', async funct
         const data = await response.json();
         window.location.href = `spiel.html?gameId=${newGameId}`;
     } catch (error) {
-        alert('Fehler beim Erstellen des Spiels: ' + error.message);
+        ('Fehler beim Erstellen des Spiels');
     }
 });
 
-// Join game
+/* 
+*   JOIN GAME
+*/
+// Populate games once site is loaded 
+document.addEventListener('DOMContentLoaded', async function() {
+    await populateGameSelect();
+});
+const joinGameBtn = document.getElementById('joinGameBtn');
+joinGameBtn.addEventListener('click', populateGameSelect);
+
+// Fill the game select element
+async function populateGameSelect() {
+    try {
+        const response = await fetch('api.php?apiFunction=getAllGames', {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        });
+
+        if (!response.ok) {
+            throw new Error('Network response was not ok');
+        }
+
+        const games = await response.json();
+        const ongoingGames = games.filter(game => game.GameObject.Base.GameState !== 'WON' );
+        const gameSelect = document.getElementById('joinGameSelect');
+        gameSelect.innerHTML = ''; // Clear any existing options
+        
+        ongoingGames.sort((a, b) => b.uid - a.uid);
+        ongoingGames.forEach(game => {
+            const option = document.createElement('option');
+            option.value = game.uid;
+            option.text = `${game.uid} - ${game.GameObject.Base.Player.map(player => player.Name).join(' vs. ')}`;
+            gameSelect.appendChild(option);
+        });
+    } catch (error) {
+        console.error('Fehler beim Laden der Spiele:', error);
+        // ('Fehler beim Laden der Spiele: ' + error.message);
+    }
+}
+
 document.getElementById('joinGameForm').addEventListener('submit', async function(event) {
     event.preventDefault();
-    const gameId = document.getElementById('joinGameId').value;
+    const gameId = document.getElementById('joinGameSelect').value;
 
     try {
         const response = await fetch(`api.php?apiFunction=getGame&gameId=${gameId}`, {
@@ -98,25 +205,13 @@ document.getElementById('joinGameForm').addEventListener('submit', async functio
         const data = await response.json();
         window.location.href = `spiel.html?gameId=${gameId}`;
     } catch (error) {
-        alert('Fehler beim Beitreten des Spiels: ' + error.message);
+        ('Spiel existiert nicht');
     }
 });
 
-// Login
-document.getElementById('loginForm').addEventListener('submit', function(event) {
-    event.preventDefault();
-    const username = document.getElementById('username').value;
-    const password = document.getElementById('password').value;
-
-    // Simple admin login check for demonstration purposes
-    if (username === 'admin' && password === 'admin123') {
-        window.location.href = 'admin.html';
-    } else {
-        alert('Falscher Benutzername oder Passwort');
-    }
-});
-
-// Add player
+/* 
+*   NEW PLAYER
+*/
 document.getElementById('addPlayerForm').addEventListener('submit', async function(event) {
     event.preventDefault();
     const playerName = document.getElementById('playerName').value;
@@ -141,11 +236,27 @@ document.getElementById('addPlayerForm').addEventListener('submit', async functi
         }
 
         const data = await response.json();
-        alert('Spieler ID: ' + data.UID);
+        ('Spieler ID: ' + data.UID);
         console.log(data.UID);
         document.getElementById('addPlayerForm').reset();
     } catch (error) {
-        alert('Fehler beim Hinzufügen des Spielers: ' + error.message);
+        ('Fehler beim Hinzufügen des Spielers: ' + error.message);
+    }
+});
+
+/* 
+*   LOGIN (currently unused)
+*/
+document.getElementById('loginForm').addEventListener('submit', function(event) {
+    event.preventDefault();
+    const username = document.getElementById('username').value;
+    const password = document.getElementById('password').value;
+
+    // Simple admin login check for demonstration purposes
+    if (username === 'admin' && password === 'admin123') {
+        window.location.href = 'admin.html';
+    } else {
+        ('Falscher Benutzername oder Passwort');
     }
 });
 

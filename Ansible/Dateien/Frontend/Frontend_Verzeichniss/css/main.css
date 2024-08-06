@@ -30,6 +30,7 @@ html {
     }
 }
 
+
 :root {
     --bg-color: white;
     --font-color: black;
@@ -92,6 +93,7 @@ footer {
     text-align: center;
     padding: 0.625rem; /* 10px */
     background-color: black;
+    margin-top:1.25rem;
 }
 #footer-wrapper {
     display: flex;
@@ -137,6 +139,13 @@ footer {
 .navbar-own a:hover {
     color: var(--fh-mint);
     transition: 0.2s;
+}
+.navbar-own .js-a {
+    color: white;
+    text-decoration: none;
+    font-size: var(--base);
+    font-weight: 500;
+    cursor: pointer;
 }
 .nav-items {
     display: flex;
@@ -263,4 +272,8 @@ input:checked + .slider:before {
 
 .slider.round:before {
   border-radius: 50%;
+}
+
+.modal-body {
+    color: black;
 }
