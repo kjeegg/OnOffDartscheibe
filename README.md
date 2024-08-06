@@ -7,11 +7,11 @@ Wenn schon ein das Vollständige Setup exestiert (Wie z.B: bei der Abschlussprä
 3) Da hier der automatische Service nicht installiert ist, muss das Program manuell gestarted werden mit "python3 OnOffDart_v4.py"
 
 
-
+FÜr das Vollständige (komplexere) Setup (falls man nen externen Server sowie CDN etc nutzen möchte), wie in der Abschlusspräsi nuzten möchte (also so wie das Projekt auch ursprünglich gedacht war), bitte in den "Ansible" Branch wechseln, und der Anleitung dort 
 
 ----------------------------------------------------------------------------------------------------------------------------
 
-
+folgen.
 Das folgende Lokale Setup ist prinzipiell nicht für den Zugriff aus dem Internet gedacht!. Es Handelt sich um ein möglichst simples lokales Setup, zum testen/nutzen im einem lokalen/Privaten Netzwerk.
 
 **<ins>Vorraussetzung:</ins>**
